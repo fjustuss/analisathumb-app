@@ -26,7 +26,7 @@
     <div class="w-full max-w-4xl mx-auto">
         <header class="text-center mb-6 relative">
             <h1 class="text-4xl md:text-5xl font-extrabold gradient-text">AnalisaThumb</h1>
-            <p class="text-gray-400 mt-2 text-lg">Potencialize seu CTR com a análise da DeepSeek.</p>
+            <p class="text-gray-400 mt-2 text-lg">Potencialize seu CTR com a análise do Gemini.</p>
         </header>
 
         <div id="app-container" class="bg-gray-800/50 backdrop-blur-sm p-6 md:p-8 rounded-2xl shadow-2xl border border-gray-700">
@@ -177,19 +177,16 @@ async function startAnalysis() {
 
     allDOMElements.inputSection.classList.add('hidden');
     allDOMElements.loadingSpinner.classList.remove('hidden');
-    allDOMElements.loadingText.textContent = `Analisando com DeepSeek...`;
+    allDOMElements.loadingText.textContent = `Analisando com Gemini...`;
 
     const el = allDOMElements;
     let niche = el.nicheSelect.value === 'Outro' ? el.customNicheInput.value.trim() : el.nicheSelect.options[el.nicheSelect.selectedIndex].text;
     niche = niche || 'Desconhecido';
     const title = el.videoTitleInput.value;
     
-    // ================== ALTERAÇÃO PARA DEPLOY FINAL ==================
-    // Substitua a URL abaixo pela URL COMPLETA do seu backend no Render
-    // Exemplo: 'https://analisathumb-app.onrender.com/api/analyze'
-    // Lembre-se de remover a regra de "Rewrite" no seu site estático no Render.
-    const backendUrl = 'https://analisathumb.onrender.com/api/analyze'; 
-    // ==========================================================
+    // O frontend agora chama o endpoint relativo /api/analyze,
+    // e o Render redireciona para o backend.
+    const backendUrl = '/api/analyze'; 
 
     let response;
     try {
@@ -223,9 +220,10 @@ function displayResults(results) {
     el.loadingSpinner.classList.add('hidden');
     el.resultsSection.classList.remove('hidden');
 
-    let finalScore = results.finalScore;
-    if (!finalScore && results.details) {
-        finalScore = Math.round(results.details.reduce((acc, item) => acc + item.score, 0) / results.details.length);
+    let finalScore = 0;
+    if (results.details && results.details.length > 0) {
+        const total = results.details.reduce((acc, item) => acc + item.score, 0);
+        finalScore = Math.round(total / results.details.length);
     }
     
     let currentScore = 0;
