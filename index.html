@@ -184,9 +184,16 @@ async function startAnalysis() {
     niche = niche || 'Desconhecido';
     const title = el.videoTitleInput.value;
     
-    let response; // Declare response outside the try block
+    // ================== ALTERAÇÃO PARA DEPLOY FINAL ==================
+    // Substitua a URL abaixo pela URL COMPLETA do seu backend no Render
+    // Exemplo: 'https://analisathumb-app.onrender.com/api/analyze'
+    // Lembre-se de remover a regra de "Rewrite" no seu site estático no Render.
+    const backendUrl = 'https://analisathumb.onrender.com/api/analyze'; 
+    // ==========================================================
+
+    let response;
     try {
-        response = await fetch('/api/analyze', {
+        response = await fetch(backendUrl, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -196,19 +203,15 @@ async function startAnalysis() {
             }),
         });
 
-        // Check if the response is successful (status 200-299)
         if (!response.ok) {
-            // If not, read the response as text to show the HTML error from the server
             const errorText = await response.text();
             throw new Error(`O servidor respondeu com erro ${response.status}. Resposta: ${errorText.substring(0, 500)}`);
         }
         
-        // If the response was ok, we can safely parse it as JSON
         const results = await response.json();
         displayResults(results);
 
     } catch (error) {
-        // This will catch network errors AND the error we threw above
         console.error("Erro na análise:", error);
         alert(`Ocorreu um erro durante a análise:\n${error.message}`);
         resetApp();
