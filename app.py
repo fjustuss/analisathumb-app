@@ -6,8 +6,11 @@ from flask_cors import CORS
 # Cria a aplicação Flask
 app = Flask(__name__)
 
-# Configura o CORS para permitir requisições do seu frontend
-CORS(app) 
+# --- CORREÇÃO DE CORS ---
+# Configura o CORS de forma mais explícita para permitir requisições
+# da API a partir de qualquer origem. O "*" pode ser trocado pela URL
+# do seu frontend no futuro para mais segurança.
+CORS(app, resources={r"/api/*": {"origins": "*"}})
 
 # Endpoint de análise que retorna um JSON de sucesso
 @app.route('/api/analyze', methods=['POST', 'GET'])
