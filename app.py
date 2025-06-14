@@ -16,11 +16,15 @@ app = Flask(__name__)
 # Permite todas as origens e métodos para facilitar o debug
 CORS(app) 
 
-@app.route('/api/analyze', methods=['POST'])
+@app.route('/api/analyze', methods=['POST', 'GET']) # CORREÇÃO: Adicionado 'GET' para aceitar ambos os métodos
 def analyze_endpoint():
     """Endpoint principal que chama a API da DeepSeek."""
     
     app.logger.info(f">>> Rota /api/analyze acessada com o método: {request.method} <<<")
+
+    # Se a requisição for GET, retorna uma mensagem de erro clara em vez de falhar.
+    if request.method == 'GET':
+        return jsonify({"error": "Método GET não é suportado para análise. Use POST."}), 405
 
     try:
         data = request.json
