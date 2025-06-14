@@ -41,12 +41,12 @@ def analyze_endpoint():
         headers = {
             "Authorization": f"Bearer {api_key}",
             "Content-Type": "application/json",
-            "HTTP-Referer": "https://analisathumb.onrender.com", # Adicione a URL do seu site
+            "HTTP-Referer": "https://analisathumb-frontend.onrender.com", # Adicione a URL do seu site
             "X-Title": "AnalisaThumb" # Adicione o nome do seu site
         }
         
         payload = {
-            "model": "deepseek/deepseek-vl-chat", # Modelo de visão correto no OpenRouter
+            "model": "deepseek/deepseek-vision", # CORREÇÃO: Nome do modelo de visão correto
             "messages": [{"role": "user", "content": [{"type": "text", "text": prompt}, {"type": "image_url", "image_url": {"url": image_data_url}}]}]
         }
         
