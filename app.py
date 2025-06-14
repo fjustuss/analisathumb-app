@@ -46,7 +46,7 @@ def analyze_endpoint():
         }
         
         payload = {
-            "model": "deepseek/deepseek-vision", # CORREÇÃO: Nome do modelo de visão correto
+            "model": "deepseek/deepseek-vl-1.3b-chat", # CORREÇÃO FINAL: Nome do modelo de visão correto
             "messages": [{"role": "user", "content": [{"type": "text", "text": prompt}, {"type": "image_url", "image_url": {"url": image_data_url}}]}]
         }
         
