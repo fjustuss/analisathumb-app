@@ -12,7 +12,60 @@ logging.basicConfig(level=logging.INFO)
 app = Flask(__name__)
 
 # --- CONFIGURAÇÃO DE CORS ---
-CORS(app, resources={r"/api/*": {"origins": "*"}})
+# Simplificado para debug, permite todas as origens e métodos
+CORS(app) 
+
+@app.route('/api/analyze', methods=['POST', 'GET']) # Aceitando GET e POST para debug
+def analyze_endpoint():
+    """Endpoint principal que chama a API da DeepSeek."""
+    
+    app.logger.info(f">>> Rota /api/analyze acessada com o método: {request.method} <<<")
+
+    # Se for um GET, apenas retorna uma mensagem de instrução
+    if request.method == 'GET':
+        return jsonify({
+            "error": "Método GET recebido.",
+            "message": "Este endpoint espera uma requisição POST com os dados da imagem."
+        })
+
+    # Se for POST, continua com a lógica original de análise
+    try:
+        data = request.json
+        if not data:
+            return jsonify({"error": "Requisição JSON vazia ou mal formatada."}), 400
+
+        image_data_url = data.get('image_data_url')
+        title = data.get('title')
+        niche = data.get('niche')
+
+        api_key = os.environ.get("DEEPSEEK_API_KEY")
+        if not api_key:
+            app.logger.error("Chave de API DEEPSEEK_API_KEY não encontrada no servidor.")
+            return jsonify({"error": "Chave de API não configurada no servidor."}), 500
+
+        prompt = create_analysis_prompt(title, niche)
+        app.logger.info(f"Iniciando análise com DeepSeek para o nicho {niche}.")
+
+        headers = {'Authorization': f'Bearer {api_key}', 'Content-Type': 'application/json'}
+        payload = {
+            "model": "deepseek-vision",
+            "messages": [{"role": "user", "content": [{"type": "text", "text": prompt}, {"type": "image_url", "image_url": {"url": image_data_url}}]}]
+        }
+        response = requests.post('https://api.deepseek.com/chat/completions', headers=headers, json=payload)
+        response.raise_for_status()
+        
+        result = response.json()['choices'][0]['message']['content']
+        cleaned_result = result.replace("```json", "").replace("```", "").strip()
+        final_json = json.loads(cleaned_result)
+        
+        return jsonify(final_json)
+
+    except requests.exceptions.HTTPError as e:
+        app.logger.error(f"Erro HTTP da API externa: {e.response.status_code} - {e.response.text}")
+        return jsonify({"error": f"Erro na API DeepSeek: {e.response.status_code}. Verifique sua chave ou o status da API."}), e.response.status_code
+    except Exception as e:
+        app.logger.error(f"Erro inesperado no servidor: {e}")
+        return jsonify({"error": f"Ocorreu um erro interno no servidor."}), 500
 
 def create_analysis_prompt(title, niche):
     """Cria o prompt detalhado para a IA."""
@@ -43,53 +96,11 @@ def create_analysis_prompt(title, niche):
       Seja rigoroso e forneça recomendações práticas e acionáveis.
     """
 
-@app.route('/api/analyze', methods=['POST'])
-def analyze_endpoint():
-    """Endpoint principal que chama a API da DeepSeek."""
-    try:
-        data = request.json
-        if not data:
-            return jsonify({"error": "Requisição JSON vazia ou mal formatada."}), 400
-
-        image_data_url = data.get('image_data_url')
-        title = data.get('title')
-        niche = data.get('niche')
-
-        api_key = os.environ.get("DEEPSEEK_API_KEY")
-        if not api_key:
-            app.logger.error("Chave de API DEEPSEEK_API_KEY não encontrada no servidor.")
-            return jsonify({"error": "Chave de API não configurada no servidor."}), 500
-
-        prompt = create_analysis_prompt(title, niche)
-        app.logger.info(f"Iniciando análise com DeepSeek para o nicho {niche}.")
-
-        headers = {'Authorization': f'Bearer {api_key}', 'Content-Type': 'application/json'}
-        payload = {
-            "model": "deepseek-vision",
-            "messages": [{"role": "user", "content": [{"type": "text", "text": prompt}, {"type": "image_url", "image_url": {"url": image_data_url}}]}]
-        }
-        response = requests.post('https://api.deepseek.com/chat/completions', headers=headers, json=payload)
-        response.raise_for_status()
-        
-        result = response.json()['choices'][0]['message']['content']
-        cleaned_result = result.replace("```json", "").replace("```", "").strip()
-        final_json = json.loads(cleaned_result)
-        
-        response = jsonify(final_json)
-        response.headers.add('Access-Control-Allow-Origin', '*')
-        return response
-
-    except requests.exceptions.HTTPError as e:
-        app.logger.error(f"Erro HTTP da API externa: {e.response.status_code} - {e.response.text}")
-        return jsonify({"error": f"Erro na API DeepSeek: {e.response.status_code}. Verifique sua chave ou o status da API."}), e.response.status_code
-    except Exception as e:
-        app.logger.error(f"Erro inesperado no servidor: {e}")
-        return jsonify({"error": "Ocorreu um erro interno no servidor."}), 500
-
 @app.route('/')
 def health_check():
     """Rota de verificação de saúde."""
-    return "Backend do AnalisaThumb (DeepSeek Edition) está no ar!"
+    return "Backend do AnalisaThumb (DeepSeek Edition - Debug 405) está no ar!"
 
 if __name__ == '__main__':
     app.run(port=os.environ.get("PORT", 5000))
+
