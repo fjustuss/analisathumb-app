@@ -40,7 +40,8 @@ def analyze_endpoint():
         # Gemini espera apenas a parte base64 da imagem
         base64_image = image_data_url.split(',')[1]
         
-        endpoint = f'https://generativelanguage.googleapis.com/v1beta/models/gemini-pro-vision:generateContent?key={api_key}'
+        # CORREÇÃO: Atualizado para o novo modelo gemini-1.5-flash-latest
+        endpoint = f'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key={api_key}'
         
         payload = {
             "contents": [{
