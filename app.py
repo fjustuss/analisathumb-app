@@ -14,68 +14,72 @@ CORS(app)
 
 @app.route('/api/analyze', methods=['POST'])
 def analyze_endpoint():
-    """Endpoint principal que recebe a requisição POST e chama a API da DeepSeek."""
+    """Endpoint principal que recebe a requisição POST e chama a API do OpenRouter."""
     
     app.logger.info(">>> Rota /api/analyze acessada <<<")
 
     try:
+        # A chave de API do OpenRouter é lida da variável de ambiente.
+        # No Render, deve ser nomeada como DEEPSEEK_API_KEY por consistência.
         api_key = os.environ.get("DEEPSEEK_API_KEY")
         if not api_key:
-            app.logger.error("Chave de API DEEPSEEK_API_KEY não encontrada no servidor.")
+            app.logger.error("Chave de API (DEEPSEEK_API_KEY) não encontrada no servidor.")
             return jsonify({"error": "Chave de API não configurada no servidor."}), 500
 
-        # ... (O resto da sua lógica de análise) ...
         data = request.json
         if not data:
             return jsonify({"error": "Requisição JSON vazia ou mal formatada."}), 400
+        
         image_data_url = data.get('image_data_url')
         title = data.get('title')
         niche = data.get('niche')
         prompt = create_analysis_prompt(title, niche)
-        app.logger.info(f"Iniciando análise com DeepSeek para o nicho '{niche}'.")
-        headers = {'Authorization': f'Bearer {api_key}', 'Content-Type': 'application/json'}
+        
+        app.logger.info(f"Iniciando análise com OpenRouter (DeepSeek) para o nicho '{niche}'.")
+        
+        # --- ALTERAÇÕES PARA O OPENROUTER ---
+        headers = {
+            "Authorization": f"Bearer {api_key}",
+            "Content-Type": "application/json",
+            "HTTP-Referer": "https://analisathumb.onrender.com", # Adicione a URL do seu site
+            "X-Title": "AnalisaThumb" # Adicione o nome do seu site
+        }
+        
         payload = {
-            "model": "deepseek-vision",
+            "model": "deepseek/deepseek-vl-chat", # Modelo de visão correto no OpenRouter
             "messages": [{"role": "user", "content": [{"type": "text", "text": prompt}, {"type": "image_url", "image_url": {"url": image_data_url}}]}]
         }
-        response = requests.post('https://api.deepseek.com/chat/completions', headers=headers, json=payload)
-        app.logger.info(f"Resposta da API DeepSeek (status {response.status_code})")
+        
+        # O endpoint agora aponta para o OpenRouter
+        response = requests.post("https://openrouter.ai/api/v1/chat/completions", headers=headers, json=payload)
+        # --- FIM DAS ALTERAÇÕES ---
+
+        app.logger.info(f"Resposta do OpenRouter (status {response.status_code})")
         response.raise_for_status()
+        
         result_data = response.json()
         result = result_data['choices'][0]['message']['content']
         cleaned_result = result.replace("```json", "").replace("```", "").strip()
         final_json = json.loads(cleaned_result)
+        
         if 'details' not in final_json or 'recommendations' not in final_json:
             app.logger.error(f"O JSON retornado pela IA não tem a estrutura esperada. Recebido: {final_json}")
             return jsonify({"error": "A resposta da IA não continha os dados esperados."}), 500
+        
         return jsonify(final_json)
 
     except requests.exceptions.HTTPError as e:
         error_text = e.response.text
         app.logger.error(f"Erro HTTP da API externa: {e.response.status_code} - {error_text}")
-        return jsonify({"error": f"Erro na API DeepSeek: {e.response.status_code}. Detalhes: {error_text}"}), e.response.status_code
+        return jsonify({"error": f"Erro na API (OpenRouter): {e.response.status_code}. Detalhes: {error_text}"}), e.response.status_code
     except Exception as e:
         app.logger.error(f"Erro inesperado no servidor: {e}")
         return jsonify({"error": f"Ocorreu um erro interno no servidor."}), 500
 
 @app.route('/')
 def health_check():
-    """
-    Rota de verificação de saúde que agora também lista as variáveis de ambiente para diagnóstico.
-    """
-    app.logger.info(">>> Rota de Health Check acessada <<<")
-    
-    # Pega todas as variáveis de ambiente disponíveis
-    env_vars = os.environ
-    
-    # Cria um dicionário para enviar como resposta JSON
-    response_data = {
-        "status": "Backend do AnalisaThumb está no ar!",
-        "message": "Abaixo estão as chaves de ambiente que este servidor consegue ver.",
-        "environment_keys": sorted(list(env_vars.keys())) # Lista os NOMES das chaves em ordem alfabética
-    }
-    
-    return jsonify(response_data)
+    """Rota de verificação de saúde para produção."""
+    return "Backend do AnalisaThumb (OpenRouter Edition) está no ar!"
 
 def create_analysis_prompt(title, niche):
     """Cria o prompt detalhado para a IA."""
