@@ -19,9 +19,6 @@
         .recommendations-list::-webkit-scrollbar-track { background: #1f2937; }
         .recommendations-list::-webkit-scrollbar-thumb { background-color: #4f46e5; border-radius: 20px; border: 3px solid #1f2937; }
         .prompt-suggestion { background-color: rgba(79, 70, 229, 0.1); border-left: 4px solid #4f46e5; padding: 10px; border-radius: 4px; font-family: monospace; font-size: 0.9em; color: #e5e7eb; }
-        .ai-selector-btn { transition: all 0.2s ease-in-out; }
-        .ai-selector-btn.selected { background-color: #4f46e5; color: white; border-color: #4f46e5; }
-        .ai-selector-btn:not(.selected) { background-color: #374151; color: #d1d5db; border-color: #4b5563; }
     </style>
 </head>
 <body class="bg-gray-900 text-gray-200 min-h-screen flex flex-col items-center justify-center p-4">
@@ -29,12 +26,11 @@
     <div class="w-full max-w-4xl mx-auto">
         <header class="text-center mb-6 relative">
             <h1 class="text-4xl md:text-5xl font-extrabold gradient-text">AnalisaThumb</h1>
-            <p class="text-gray-400 mt-2 text-lg">Potencialize seu CTR com a análise de IA.</p>
+            <p class="text-gray-400 mt-2 text-lg">Potencialize seu CTR com a análise da DeepSeek.</p>
         </header>
 
         <div id="app-container" class="bg-gray-800/50 backdrop-blur-sm p-6 md:p-8 rounded-2xl shadow-2xl border border-gray-700">
             <div id="input-section">
-                <!-- Conteúdo do input section... (sem alterações) -->
                 <div class="flex border-b border-gray-700 mb-6">
                     <button id="tab-upload" class="flex-1 py-3 px-4 text-center font-semibold border-b-2 transition-colors duration-300 tab-active">Enviar Imagem</button>
                     <button id="tab-url" class="flex-1 py-3 px-4 text-center font-semibold border-b-2 transition-colors duration-300 tab-inactive">Colar URL</button>
@@ -53,21 +49,11 @@
                     <div class="max-w-md mx-auto text-left"><label for="niche-select" class="block mb-2 text-sm font-medium">Nicho do Vídeo</label><select id="niche-select" class="w-full bg-gray-900 border border-gray-600 rounded-lg p-2.5"><option selected>Tecnologia / IA</option><option>Games</option><option>Finanças</option><option>Vlogs / Lifestyle</option><option>Educação</option><option value="Outro">Outro</option></select><div id="custom-niche-container" class="hidden mt-4"><input type="text" id="custom-niche-input" class="w-full bg-gray-900 border border-gray-600 rounded-lg p-2.5" placeholder="Digite seu nicho..."></div></div>
                 </div>
 
-                <div id="ai-selector-container" class="hidden mt-6">
-                    <label class="block mb-2 text-sm font-medium text-center text-gray-300">Escolha o Motor de Análise</label>
-                    <div class="grid grid-cols-2 md:grid-cols-4 gap-2 max-w-md mx-auto">
-                        <button class="ai-selector-btn p-2 rounded-lg border-2" data-ai="gemini">Gemini</button>
-                        <button class="ai-selector-btn p-2 rounded-lg border-2" data-ai="openai">ChatGPT</button>
-                        <button class="ai-selector-btn p-2 rounded-lg border-2" data-ai="deepseek">DeepSeek</button>
-                        <button class="ai-selector-btn p-2 rounded-lg border-2 selected" data-ai="simulation">Simulação</button>
-                    </div>
-                </div>
-
                 <div class="mt-8 text-center"><button id="analyze-button" class="bg-indigo-600 text-white font-bold py-3 px-10 rounded-lg hover:bg-indigo-500 transition-all disabled:bg-gray-600 disabled:cursor-not-allowed" disabled>Analisar</button></div>
             </div>
 
-            <!-- Loading e Results sections (sem alterações) -->
             <div id="loading-spinner" class="hidden text-center py-20"><div role="status"><svg aria-hidden="true" class="inline w-12 h-12 text-gray-600 animate-spin fill-indigo-500" viewBox="0 0 100 101" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M100 50.5908C100 78.2051 77.6142 100.591 50 100.591C22.3858 100.591 0 78.2051 0 50.5908C0 22.9766 22.3858 0.59082 50 0.59082C77.6142 0.59082 100 22.9766 100 50.5908ZM9.08144 50.5908C9.08144 73.1895 27.4013 91.5094 50 91.5094C72.5987 91.5094 90.9186 73.1895 90.9186 50.5908C90.9186 27.9921 72.5987 9.67226 50 9.67226C27.4013 9.67226 9.08144 27.9921 9.08144 50.5908Z" fill="currentColor"/><path d="M93.9676 39.0409C96.393 38.4038 97.8624 35.9116 97.0079 33.5539C95.2932 28.8227 92.871 24.3692 89.8167 20.348C85.8452 15.1192 80.8826 10.7238 75.2124 7.41289C69.5422 4.10194 63.2754 1.94025 56.7698 1.05124C51.7666 0.367541 46.6976 0.446843 41.7345 1.27873C39.2613 1.69328 37.813 4.19778 38.4501 6.62326C39.0873 9.04874 41.5694 10.4717 44.0505 10.1071C47.8511 9.54855 51.7191 9.52689 55.5402 10.0492C60.8642 10.7766 65.9928 12.5457 70.6331 15.2552C75.2735 17.9648 79.3347 21.5619 82.5849 25.841C84.9175 28.9121 86.7997 32.2913 88.1811 35.8758C89.083 38.2158 91.5421 39.6781 93.9676 39.0409Z" fill="currentFill"/></svg><p id="loading-text" class="mt-4 text-lg text-gray-400">Analisando...</p></div></div>
+            
             <div id="results-section" class="hidden">
                  <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 md:gap-8"><div class="lg:col-span-1 bg-gray-900/50 p-6 rounded-xl flex flex-col items-center justify-center border border-gray-700"><h2 class="text-xl font-bold mb-4 text-center">Pontuação Final</h2><div class="relative w-48 h-48"><svg class="w-full h-full" viewBox="0 0 100 100"><circle class="text-gray-700" stroke-width="10" stroke="currentColor" fill="transparent" r="45" cx="50" cy="50" /><circle id="score-circle-progress" class="score-circle text-indigo-500" stroke-width="10" stroke-linecap="round" stroke="currentColor" fill="transparent" r="45" cx="50" cy="50" style="stroke-dasharray: 283; stroke-dashoffset: 283;" /></svg><div id="score-text" class="absolute inset-0 flex items-center justify-center text-5xl font-extrabold gradient-text">0</div></div><img id="result-image-preview" src="" alt="Thumbnail Analisada" class="mt-6 w-full rounded-lg shadow-lg border-2 border-gray-600"></div><div class="lg:col-span-2"><div class="bg-gray-900/50 p-6 rounded-xl border border-gray-700 mb-6"><h3 class="text-xl font-bold mb-5">Análise Detalhada</h3><div id="detailed-analysis-container" class="space-y-4"></div></div><div class="bg-gray-900/50 p-6 rounded-xl border border-gray-700"><h3 class="text-xl font-bold mb-4">Recomendações para Melhorar</h3><ul id="recommendations-list" class="space-y-3 h-48 overflow-y-auto pr-2 recommendations-list"></ul></div></div></div>
                  <div class="mt-8 flex justify-center"><button id="restart-button" class="bg-gray-600 text-white font-bold py-3 px-10 rounded-lg hover:bg-gray-500">Analisar Outra</button></div>
@@ -78,7 +64,6 @@
     </div>
 
 <script>
-// --- ELEMENTOS DO DOM ---
 const allDOMElements = {
     tabUpload: document.getElementById('tab-upload'),
     tabUrl: document.getElementById('tab-url'),
@@ -87,7 +72,6 @@ const allDOMElements = {
     imageUploadInput: document.getElementById('image-upload'),
     youtubeUrlInput: document.getElementById('youtube-url'),
     contextInputsContainer: document.getElementById('context-inputs-container'),
-    aiSelectorContainer: document.getElementById('ai-selector-container'),
     imagePreview: document.getElementById('image-preview'),
     videoTitleInput: document.getElementById('video-title-input'),
     nicheSelect: document.getElementById('niche-select'),
@@ -104,14 +88,10 @@ const allDOMElements = {
     detailedAnalysisContainer: document.getElementById('detailed-analysis-container'),
     recommendationsList: document.getElementById('recommendations-list'),
     restartButton: document.getElementById('restart-button'),
-    aiSelectorBtns: document.querySelectorAll('.ai-selector-btn')
 };
 
-// --- ESTADO DA APLICAÇÃO ---
 let imageDataSource = null;
-let selectedAI = 'simulation';
 
-// --- EVENT LISTENERS ---
 function setupEventListeners() {
     const el = allDOMElements;
     el.tabUpload.addEventListener('click', () => switchTab('upload'));
@@ -121,25 +101,14 @@ function setupEventListeners() {
     el.nicheSelect.addEventListener('change', handleNicheChange);
     el.analyzeButton.addEventListener('click', startAnalysis);
     el.restartButton.addEventListener('click', resetApp);
-    el.aiSelectorBtns.forEach(btn => {
-        btn.addEventListener('click', () => {
-            el.aiSelectorBtns.forEach(b => b.classList.remove('selected'));
-            btn.classList.add('selected');
-            selectedAI = btn.dataset.ai;
-        });
-    });
 }
 
 document.addEventListener('DOMContentLoaded', setupEventListeners);
 
-// --- FUNÇÕES PRINCIPAIS ---
-
 function switchTab(tabName) {
     const el = allDOMElements;
     el.tabUpload.classList.toggle('tab-active', tabName === 'upload');
-    el.tabUpload.classList.toggle('tab-inactive', tabName !== 'upload');
-    el.tabUrl.classList.toggle('tab-active', tabName === 'url');
-    el.tabUrl.classList.toggle('tab-inactive', tabName !== 'url');
+    el.tabUrl.classList.toggle('tab-active', tabName !== 'url');
     el.formUpload.classList.toggle('hidden', tabName !== 'upload');
     el.formUrl.classList.toggle('hidden', tabName === 'upload');
     resetInputs();
@@ -150,7 +119,6 @@ function resetInputs() {
     el.imageUploadInput.value = '';
     el.youtubeUrlInput.value = '';
     el.contextInputsContainer.classList.add('hidden');
-    el.aiSelectorContainer.classList.add('hidden');
     el.videoTitleInput.value = '';
     el.customNicheContainer.classList.add('hidden');
     el.customNicheInput.value = '';
@@ -184,7 +152,6 @@ function handleUrlInput() {
         showPreview(thumbnailUrl);
     } else {
         allDOMElements.contextInputsContainer.classList.add('hidden');
-        allDOMElements.aiSelectorContainer.classList.add('hidden');
         allDOMElements.analyzeButton.disabled = true;
     }
 }
@@ -198,7 +165,6 @@ function showPreview(src) {
     const el = allDOMElements;
     el.imagePreview.setAttribute('src', src);
     el.contextInputsContainer.classList.remove('hidden');
-    el.aiSelectorContainer.classList.remove('hidden');
     el.analyzeButton.disabled = false;
 }
 
@@ -211,32 +177,18 @@ async function startAnalysis() {
 
     allDOMElements.inputSection.classList.add('hidden');
     allDOMElements.loadingSpinner.classList.remove('hidden');
-    allDOMElements.loadingText.textContent = `Analisando com ${selectedAI.toUpperCase()}...`;
-
-    if (selectedAI === 'simulation') {
-        await new Promise(resolve => setTimeout(resolve, 2000));
-        const simResults = runLocalSimulation(allDOMElements.videoTitleInput.value, allDOMElements.nicheSelect.value);
-        displayResults(simResults);
-        return;
-    }
+    allDOMElements.loadingText.textContent = `Analisando com DeepSeek...`;
 
     const el = allDOMElements;
     let niche = el.nicheSelect.value === 'Outro' ? el.customNicheInput.value.trim() : el.nicheSelect.options[el.nicheSelect.selectedIndex].text;
     niche = niche || 'Desconhecido';
     const title = el.videoTitleInput.value;
     
-    // ================== ALTERAÇÃO PARA DEBUG ==================
-    // Substitua a URL abaixo pela URL COMPLETA do seu backend no Render
-    // Exemplo: 'https://analisathumb-backend.onrender.com/api/analyze'
-    const backendUrl = 'URL_COMPLETA_DO_SEU_BACKEND_AQUI/api/analyze'; 
-    // ==========================================================
-
     try {
-        const response = await fetch(backendUrl, { // <-- Alterado aqui para usar a URL completa
+        const response = await fetch('/api/analyze', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-                ai_service: selectedAI,
                 image_data_url: imageDataSource,
                 title: title,
                 niche: niche,
@@ -249,58 +201,40 @@ async function startAnalysis() {
 
     } catch (error) {
         console.error("Erro na análise:", error);
-        alert(`Ocorreu um erro durante a análise: ${error.message}. Verifique a URL do backend e se ele está no ar.`);
+        alert(`Ocorreu um erro durante a análise: ${error.message}.`);
         resetApp();
     }
 }
 
-// --- Funções de UI e Simulação (sem alterações) ---
-function runLocalSimulation(videoTitle, selectedNiche) {
-    const recommendations = [];
-    const details = [];
-    let totalScore = 0;
-    const lowerCaseTitle = videoTitle.toLowerCase();
-    if(lowerCaseTitle.includes('como') || lowerCaseTitle.includes('tutorial')) recommendations.push("Para tutoriais, mostre o resultado final na thumbnail.");
-    const numberInList = lowerCaseTitle.match(/\d+/);
-    if(numberInList) recommendations.push(`Destaque o número '${numberInList[0]}' na thumbnail com uma fonte grande!`);
-    const criteria = ["Legibilidade do Texto", "Impacto Emocional", "Foco e Composição", "Uso de Cores", `Relevância (${selectedNiche})`];
-    criteria.forEach(name => {
-        const score = Math.floor(Math.random() * 51) + 45;
-        if(score < 75) recommendations.push(`Melhorar: ${name.split('(')[0].trim()}`);
-        details.push({ name, score });
-        totalScore += score;
-    });
-    if (details.find(d => d.name.includes("Composição")).score < 60 && videoTitle.length > 5) {
-        let promptCore = videoTitle.split(' ').slice(0, 5).join(' ').replace(/como|o que é|de/g, '');
-        recommendations.push(`Sugestão de Prompt: ${promptCore}, close-up, cores vibrantes, estilo cinematográfico, para thumbnail do YouTube --ar 16:9`);
-    }
-    if (recommendations.length === 0) recommendations.push("Ótima thumbnail! Parece bem otimizada.");
-    const finalScore = Math.round(totalScore / details.length);
-    return { finalScore, details, recommendations };
-}
 function displayResults(results) {
     const el = allDOMElements;
     el.loadingSpinner.classList.add('hidden');
     el.resultsSection.classList.remove('hidden');
+
     let finalScore = results.finalScore;
     if (!finalScore && results.details) {
         finalScore = Math.round(results.details.reduce((acc, item) => acc + item.score, 0) / results.details.length);
     }
+    
     let currentScore = 0;
     const scoreInterval = setInterval(() => {
         currentScore++;
         el.scoreText.textContent = currentScore;
         if (currentScore >= finalScore) clearInterval(scoreInterval);
     }, 20);
+    
     const circleCircumference = 2 * Math.PI * 45;
     const scoreOffset = circleCircumference - (finalScore / 100) * circleCircumference;
     el.scoreCircleProgress.style.strokeDashoffset = scoreOffset;
     el.resultImagePreview.setAttribute('src', imageDataSource);
+
     el.detailedAnalysisContainer.innerHTML = '';
     results.details.forEach(item => {
         el.detailedAnalysisContainer.innerHTML += `<div><div class="flex justify-between items-center mb-1"><p class="font-semibold">${item.name}</p><p class="font-bold text-lg ${getScoreColor(item.score)}">${item.score}/100</p></div><div class="w-full bg-gray-700 rounded-full h-2.5"><div class="bg-gradient-to-r ${getGradientClass(item.score)} h-2.5 rounded-full progress-bar-fill" style="width: 0%" data-width="${item.score}%"></div></div></div>`;
     });
+    
     setTimeout(() => { document.querySelectorAll('.progress-bar-fill').forEach(bar => bar.style.width = bar.dataset.width); }, 100);
+
     el.recommendationsList.innerHTML = '';
     results.recommendations.forEach(rec => {
         const isPrompt = rec.startsWith('Sugestão de Prompt:');
@@ -309,16 +243,19 @@ function displayResults(results) {
         el.recommendationsList.innerHTML += `<li class="flex items-start">${icon}${content}</li>`;
     });
 }
+
 function resetApp() {
     allDOMElements.resultsSection.classList.add('hidden');
     allDOMElements.inputSection.classList.remove('hidden');
     resetInputs();
 }
+
 function getScoreColor(score) {
     if (score < 65) return 'text-red-400';
     if (score < 85) return 'text-yellow-400';
     return 'text-green-400';
 }
+
 function getGradientClass(score) {
     if (score < 65) return 'from-red-500 to-orange-500';
     if (score < 85) return 'from-yellow-500 to-amber-500';
@@ -329,12 +266,11 @@ function getGradientClass(score) {
 </html>
 ```
 
-### O Que Fazer Agora:
+### Próximos Passos:
 
-1.  **Encontre a URL do seu Backend:** Vá ao dashboard do Render, clique no seu **Web Service** e copie a URL que aparece no topo (ex: `https://analisathumb-app.onrender.com`).
-2.  **Atualize o Código:** No `index.html` que forneci acima, substitua `'https://analisathumb.onrender.com//api/analyze'` pela sua URL real, mantendo o `/api/analyze` no final.
-3.  **Envie para o GitHub:** Salve o `index.html` modificado e envie a atualização para o seu repositório no GitHub.
-4.  **Aguarde o Deploy:** O Render irá detectar a alteração e fazer o deploy automático do seu site estático.
-5.  **Teste Novamente:** Acesse a URL do seu site estático e tente fazer uma análise.
-
-Depois de testar, nos diga o resultado. Se funcionar, sabemos que o problema é a regra de rewrite. Se ainda der erro, o erro agora será diferente (provavelmente um erro de CORS), e saberemos exatamente como consertá-lo no backe
+1.  **Atualize seus arquivos:** Substitua o `app.py` e o `index.html` locais pelos códigos acima.
+2.  **Envie para o GitHub:** Faça o commit e o push das alterações para o seu repositório.
+3.  **Configure o Render:**
+    * Verifique se a variável de ambiente no seu Web Service no Render se chama `DEEPSEEK_API_KEY`.
+    * Garanta que não há mais variáveis para `GEMINI_API_KEY` ou `OPENAI_API_KEY`, para manter tudo limpo.
+4.  **Teste:** Após o deploy automático do Render, seu site estará funcionando com a nova versão simplifica

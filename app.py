@@ -12,13 +12,7 @@ logging.basicConfig(level=logging.INFO)
 app = Flask(__name__)
 
 # --- CONFIGURAÇÃO DE CORS ---
-# Permite requisições da API a partir de qualquer origem.
 CORS(app, resources={r"/api/*": {"origins": "*"}})
-
-def get_api_key(ai_service):
-    """Busca a chave de API correta das variáveis de ambiente do servidor."""
-    key_name = f"{ai_service.upper()}_API_KEY"
-    return os.environ.get(key_name)
 
 def create_analysis_prompt(title, niche):
     """Cria o prompt detalhado para a IA."""
@@ -46,73 +40,38 @@ def create_analysis_prompt(title, niche):
         ]
       }}
 
-      Critérios para pontuação:
-      - Legibilidade: O texto é grande, claro e contrasta com o fundo?
-      - Impacto Emocional: Há um rosto humano? A emoção (surpresa, alegria, choque) é forte e clara?
-      - Foco e Composição: A regra dos terços é usada? O ponto focal é óbvio? A imagem é limpa ou poluída?
-      - Uso de Cores: As cores são vibrantes? Há contraste? A paleta de cores atrai atenção?
-      - Relevância: A imagem se conecta com o título e o nicho? Ela representa visualmente a promessa do título?
-
       Seja rigoroso e forneça recomendações práticas e acionáveis.
     """
 
 @app.route('/api/analyze', methods=['POST'])
 def analyze_endpoint():
-    """Endpoint principal que recebe a requisição e chama a IA selecionada."""
+    """Endpoint principal que chama a API da DeepSeek."""
     try:
         data = request.json
         if not data:
             return jsonify({"error": "Requisição JSON vazia ou mal formatada."}), 400
 
-        ai_service = data.get('ai_service')
         image_data_url = data.get('image_data_url')
         title = data.get('title')
         niche = data.get('niche')
 
-        api_key = get_api_key(ai_service)
+        api_key = os.environ.get("DEEPSEEK_API_KEY")
         if not api_key:
-            app.logger.error(f"Chave de API para {ai_service.upper()} não encontrada no servidor.")
-            return jsonify({"error": f"Chave de API para {ai_service.upper()} não configurada no servidor."}), 500
+            app.logger.error("Chave de API DEEPSEEK_API_KEY não encontrada no servidor.")
+            return jsonify({"error": "Chave de API não configurada no servidor."}), 500
 
         prompt = create_analysis_prompt(title, niche)
-        app.logger.info(f"Iniciando análise com {ai_service.upper()} para o nicho {niche}.")
+        app.logger.info(f"Iniciando análise com DeepSeek para o nicho {niche}.")
 
-        if ai_service == 'openai':
-            headers = {'Authorization': f'Bearer {api_key}', 'Content-Type': 'application/json'}
-            payload = {
-                "model": "gpt-4o",
-                "response_format": {"type": "json_object"},
-                "messages": [{"role": "user", "content": [{"type": "text", "text": prompt}, {"type": "image_url", "image_url": {"url": image_data_url}}]}]
-            }
-            response = requests.post('https://api.openai.com/v1/chat/completions', headers=headers, json=payload)
-            response.raise_for_status()
-            result = response.json()['choices'][0]['message']['content']
-
-        elif ai_service == 'gemini':
-            base64_image = image_data_url.split(',')[1]
-            endpoint = f'https://generativelanguage.googleapis.com/v1beta/models/gemini-pro-vision:generateContent?key={api_key}'
-            payload = {"contents": [{"parts": [{"text": prompt}, {"inline_data": {"mime_type": "image/jpeg", "data": base64_image}}]}]}
-            response = requests.post(endpoint, json=payload)
-            response.raise_for_status()
-            result_json = response.json()
-            # Tratamento de erro específico para Gemini
-            if 'candidates' not in result_json or not result_json['candidates']:
-                 raise ValueError("Resposta da API Gemini inválida: sem 'candidates'.")
-            result = result_json['candidates'][0]['content']['parts'][0]['text']
-
-        elif ai_service == 'deepseek':
-            headers = {'Authorization': f'Bearer {api_key}', 'Content-Type': 'application/json'}
-            payload = {
-                "model": "deepseek-vision",
-                "messages": [{"role": "user", "content": [{"type": "text", "text": prompt}, {"type": "image_url", "image_url": {"url": image_data_url}}]}]
-            }
-            response = requests.post('https://api.deepseek.com/chat/completions', headers=headers, json=payload)
-            response.raise_for_status()
-            result = response.json()['choices'][0]['message']['content']
+        headers = {'Authorization': f'Bearer {api_key}', 'Content-Type': 'application/json'}
+        payload = {
+            "model": "deepseek-vision",
+            "messages": [{"role": "user", "content": [{"type": "text", "text": prompt}, {"type": "image_url", "image_url": {"url": image_data_url}}]}]
+        }
+        response = requests.post('https://api.deepseek.com/chat/completions', headers=headers, json=payload)
+        response.raise_for_status()
         
-        else:
-            return jsonify({"error": "Serviço de IA desconhecido"}), 400
-
+        result = response.json()['choices'][0]['message']['content']
         cleaned_result = result.replace("```json", "").replace("```", "").strip()
         final_json = json.loads(cleaned_result)
         
@@ -122,16 +81,15 @@ def analyze_endpoint():
 
     except requests.exceptions.HTTPError as e:
         app.logger.error(f"Erro HTTP da API externa: {e.response.status_code} - {e.response.text}")
-        return jsonify({"error": f"Erro na API de IA: {e.response.status_code}. Verifique sua chave ou o status da API."}), e.response.status_code
+        return jsonify({"error": f"Erro na API DeepSeek: {e.response.status_code}. Verifique sua chave ou o status da API."}), e.response.status_code
     except Exception as e:
         app.logger.error(f"Erro inesperado no servidor: {e}")
-        return jsonify({"error": f"Ocorreu um erro interno no servidor."}), 500
+        return jsonify({"error": "Ocorreu um erro interno no servidor."}), 500
 
 @app.route('/')
 def health_check():
     """Rota de verificação de saúde."""
-    return "Backend do AnalisaThumb está no ar! Versão de produção."
+    return "Backend do AnalisaThumb (DeepSeek Edition) está no ar!"
 
 if __name__ == '__main__':
     app.run(port=os.environ.get("PORT", 5000))
-
