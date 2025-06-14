@@ -6,29 +6,22 @@ from flask import Flask, request, jsonify
 from flask_cors import CORS
 
 # --- CONFIGURAÇÃO DE LOGGING ---
+# Garante que vejamos todas as mensagens de debug nos logs do Render
 logging.basicConfig(level=logging.INFO)
 
 # Cria a aplicação Flask
 app = Flask(__name__)
 
 # --- CONFIGURAÇÃO DE CORS ---
-# Simplificado para debug, permite todas as origens e métodos
+# Permite todas as origens e métodos para facilitar o debug
 CORS(app) 
 
-@app.route('/api/analyze', methods=['POST', 'GET']) # Aceitando GET e POST para debug
+@app.route('/api/analyze', methods=['POST'])
 def analyze_endpoint():
     """Endpoint principal que chama a API da DeepSeek."""
     
     app.logger.info(f">>> Rota /api/analyze acessada com o método: {request.method} <<<")
 
-    # Se for um GET, apenas retorna uma mensagem de instrução
-    if request.method == 'GET':
-        return jsonify({
-            "error": "Método GET recebido.",
-            "message": "Este endpoint espera uma requisição POST com os dados da imagem."
-        })
-
-    # Se for POST, continua com a lógica original de análise
     try:
         data = request.json
         if not data:
@@ -52,12 +45,24 @@ def analyze_endpoint():
             "messages": [{"role": "user", "content": [{"type": "text", "text": prompt}, {"type": "image_url", "image_url": {"url": image_data_url}}]}]
         }
         response = requests.post('https://api.deepseek.com/chat/completions', headers=headers, json=payload)
+        
+        # Log da resposta bruta da API para debug. Este é o passo mais importante.
+        app.logger.info(f"Resposta da API DeepSeek (status {response.status_code}): {response.text}")
+        
+        # Verifica se a chamada à API falhou
         response.raise_for_status()
         
-        result = response.json()['choices'][0]['message']['content']
+        result_data = response.json()
+        result = result_data['choices'][0]['message']['content']
         cleaned_result = result.replace("```json", "").replace("```", "").strip()
         final_json = json.loads(cleaned_result)
         
+        # --- VERIFICAÇÃO DE ESTRUTURA ---
+        # Verifica se o JSON recebido tem as chaves que o frontend espera
+        if 'details' not in final_json or 'recommendations' not in final_json:
+            app.logger.error(f"O JSON retornado pela IA não tem a estrutura esperada. Recebido: {final_json}")
+            return jsonify({"error": "A resposta da IA não continha os dados esperados. Verifique os logs do backend para mais detalhes."}), 500
+
         return jsonify(final_json)
 
     except requests.exceptions.HTTPError as e:
@@ -99,8 +104,7 @@ def create_analysis_prompt(title, niche):
 @app.route('/')
 def health_check():
     """Rota de verificação de saúde."""
-    return "Backend do AnalisaThumb (DeepSeek Edition - Debug 405) está no ar!"
+    return "Backend do AnalisaThumb (DeepSeek Edition - Debug Final) está no ar!"
 
 if __name__ == '__main__':
     app.run(port=os.environ.get("PORT", 5000))
-
