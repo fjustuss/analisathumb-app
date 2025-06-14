@@ -36,20 +36,28 @@ def analyze_endpoint():
         
         app.logger.info(f"Iniciando análise com API Direta DeepSeek para o nicho '{niche}'.")
         
-        # --- ALTERAÇÕES PARA API DIRETA DEEPSEEK ---
+        # --- CORREÇÃO PARA O FORMATO DA API DEEPSEEK ---
         headers = {
             "Authorization": f"Bearer {api_key}",
             "Content-Type": "application/json"
         }
         
+        # A API da DeepSeek espera que o conteúdo seja uma string única
+        # e a imagem seja passada em um campo separado dentro da mensagem.
         payload = {
-            "model": "deepseek-chat", # Modelo multimodal da DeepSeek
-            "messages": [{"role": "user", "content": [{"type": "text", "text": prompt}, {"type": "image_url", "image_url": {"url": image_data_url}}]}]
+            "model": "deepseek-chat",
+            "messages": [
+                {
+                    "role": "user",
+                    "content": prompt, # O texto do prompt vai aqui
+                    "image": image_data_url # A imagem vai em um campo separado
+                }
+            ]
         }
         
-        # O endpoint agora aponta diretamente para a DeepSeek
+        # O endpoint aponta diretamente para a DeepSeek
         response = requests.post("https://api.deepseek.com/chat/completions", headers=headers, json=payload)
-        # --- FIM DAS ALTERAÇÕES ---
+        # --- FIM DA CORREÇÃO ---
 
         app.logger.info(f"Resposta da DeepSeek (status {response.status_code})")
         response.raise_for_status()
