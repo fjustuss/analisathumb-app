@@ -184,9 +184,10 @@ async function startAnalysis() {
     niche = niche || 'Desconhecido';
     const title = el.videoTitleInput.value;
     
-    // O frontend agora chama o endpoint relativo /api/analyze,
-    // e o Render redireciona para o backend.
-    const backendUrl = '/api/analyze'; 
+    // --- ALTERAÇÃO FINAL ---
+    // Substitua a URL abaixo pela URL COMPLETA do seu backend (Web Service) no Render
+    // Exemplo: const backendUrl = 'https://analisathumb-app.onrender.com/api/analyze';
+    const backendUrl = 'https://analisathumb.onrender.com/api/analyze'; 
 
     let response;
     try {
