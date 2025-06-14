@@ -184,8 +184,9 @@ async function startAnalysis() {
     niche = niche || 'Desconhecido';
     const title = el.videoTitleInput.value;
     
+    let response; // Declare response outside the try block
     try {
-        const response = await fetch('/api/analyze', {
+        response = await fetch('/api/analyze', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -195,13 +196,21 @@ async function startAnalysis() {
             }),
         });
 
+        // Check if the response is successful (status 200-299)
+        if (!response.ok) {
+            // If not, read the response as text to show the HTML error from the server
+            const errorText = await response.text();
+            throw new Error(`O servidor respondeu com erro ${response.status}. Resposta: ${errorText.substring(0, 500)}`);
+        }
+        
+        // If the response was ok, we can safely parse it as JSON
         const results = await response.json();
-        if (!response.ok) throw new Error(results.error || `Erro ${response.status}`);
         displayResults(results);
 
     } catch (error) {
+        // This will catch network errors AND the error we threw above
         console.error("Erro na análise:", error);
-        alert(`Ocorreu um erro durante a análise: ${error.message}.`);
+        alert(`Ocorreu um erro durante a análise:\n${error.message}`);
         resetApp();
     }
 }
@@ -264,13 +273,3 @@ function getGradientClass(score) {
 </script>
 </body>
 </html>
-```
-
-### Próximos Passos:
-
-1.  **Atualize seus arquivos:** Substitua o `app.py` e o `index.html` locais pelos códigos acima.
-2.  **Envie para o GitHub:** Faça o commit e o push das alterações para o seu repositório.
-3.  **Configure o Render:**
-    * Verifique se a variável de ambiente no seu Web Service no Render se chama `DEEPSEEK_API_KEY`.
-    * Garanta que não há mais variáveis para `GEMINI_API_KEY` ou `OPENAI_API_KEY`, para manter tudo limpo.
-4.  **Teste:** Após o deploy automático do Render, seu site estará funcionando com a nova versão simplifica
