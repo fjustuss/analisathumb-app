@@ -14,13 +14,12 @@ CORS(app)
 
 @app.route('/api/analyze', methods=['POST'])
 def analyze_endpoint():
-    """Endpoint principal que recebe a requisição POST e chama a API do OpenRouter."""
+    """Endpoint principal que recebe a requisição POST e chama a API da DeepSeek diretamente."""
     
     app.logger.info(">>> Rota /api/analyze acessada <<<")
 
     try:
-        # A chave de API do OpenRouter é lida da variável de ambiente.
-        # No Render, deve ser nomeada como DEEPSEEK_API_KEY por consistência.
+        # A chave de API da DeepSeek é lida da variável de ambiente.
         api_key = os.environ.get("DEEPSEEK_API_KEY")
         if not api_key:
             app.logger.error("Chave de API (DEEPSEEK_API_KEY) não encontrada no servidor.")
@@ -35,26 +34,24 @@ def analyze_endpoint():
         niche = data.get('niche')
         prompt = create_analysis_prompt(title, niche)
         
-        app.logger.info(f"Iniciando análise com OpenRouter (DeepSeek) para o nicho '{niche}'.")
+        app.logger.info(f"Iniciando análise com API Direta DeepSeek para o nicho '{niche}'.")
         
-        # --- ALTERAÇÕES PARA O OPENROUTER ---
+        # --- ALTERAÇÕES PARA API DIRETA DEEPSEEK ---
         headers = {
             "Authorization": f"Bearer {api_key}",
-            "Content-Type": "application/json",
-            "HTTP-Referer": "https://analisathumb-frontend.onrender.com", # Adicione a URL do seu site
-            "X-Title": "AnalisaThumb" # Adicione o nome do seu site
+            "Content-Type": "application/json"
         }
         
         payload = {
-            "model": "deepseek/deepseek-chat", # CORREÇÃO: Usando o nome do modelo de chat principal.
+            "model": "deepseek-chat", # Modelo multimodal da DeepSeek
             "messages": [{"role": "user", "content": [{"type": "text", "text": prompt}, {"type": "image_url", "image_url": {"url": image_data_url}}]}]
         }
         
-        # O endpoint agora aponta para o OpenRouter
-        response = requests.post("https://openrouter.ai/api/v1/chat/completions", headers=headers, json=payload)
+        # O endpoint agora aponta diretamente para a DeepSeek
+        response = requests.post("https://api.deepseek.com/chat/completions", headers=headers, json=payload)
         # --- FIM DAS ALTERAÇÕES ---
 
-        app.logger.info(f"Resposta do OpenRouter (status {response.status_code})")
+        app.logger.info(f"Resposta da DeepSeek (status {response.status_code})")
         response.raise_for_status()
         
         result_data = response.json()
@@ -71,7 +68,7 @@ def analyze_endpoint():
     except requests.exceptions.HTTPError as e:
         error_text = e.response.text
         app.logger.error(f"Erro HTTP da API externa: {e.response.status_code} - {error_text}")
-        return jsonify({"error": f"Erro na API (OpenRouter): {e.response.status_code}. Detalhes: {error_text}"}), e.response.status_code
+        return jsonify({"error": f"Erro na API DeepSeek: {e.response.status_code}. Detalhes: {error_text}"}), e.response.status_code
     except Exception as e:
         app.logger.error(f"Erro inesperado no servidor: {e}")
         return jsonify({"error": f"Ocorreu um erro interno no servidor."}), 500
@@ -79,7 +76,7 @@ def analyze_endpoint():
 @app.route('/')
 def health_check():
     """Rota de verificação de saúde para produção."""
-    return "Backend do AnalisaThumb (OpenRouter Edition) está no ar!"
+    return "Backend do AnalisaThumb (DeepSeek Direto) está no ar!"
 
 def create_analysis_prompt(title, niche):
     """Cria o prompt detalhado para a IA."""
