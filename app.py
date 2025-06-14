@@ -89,14 +89,21 @@ def health_check():
     return "Backend do AnalisaThumb (Gemini Edition) está no ar!"
 
 def create_analysis_prompt(title, niche):
-    # O prompt permanece o mesmo
+    """
+    Cria um prompt mais detalhado e instrutivo para a IA, garantindo
+    recomendações mais ricas e a geração de prompts de imagem.
+    """
     return f"""
-      Você é o AnalisaThumb, um especialista de classe mundial em otimização de thumbnails do YouTube com foco em maximizar a Taxa de Cliques (CTR).
-      Analise a imagem da thumbnail e o contexto fornecido (título e nicho do vídeo).
-      Contexto:
-      - Título do Vídeo: "{title or 'Não fornecido'}"
-      - Nicho: "{niche}"
-      Sua tarefa é retornar um objeto JSON, e APENAS o objeto JSON, com a seguinte estrutura:
+      Você é o AnalisaThumb, um especialista de classe mundial em otimização de thumbnails do YouTube com foco em maximizar a Taxa de Cliques (CTR). Sua análise deve ser rigorosa, objetiva e baseada em princípios de design e marketing.
+
+      **Contexto do Vídeo:**
+      - **Título:** "{title or 'Não fornecido'}"
+      - **Nicho:** "{niche}"
+
+      **Sua Tarefa:**
+      Analise a imagem da thumbnail fornecida e o contexto acima. Retorne **APENAS** um objeto JSON com a seguinte estrutura:
+
+      ```json
       {{
         "details": [
           {{"name": "Legibilidade do Texto", "score": 0-100}},
@@ -108,10 +115,47 @@ def create_analysis_prompt(title, niche):
         "recommendations": [
           "Recomendação 1",
           "Recomendação 2",
-          "Sugestão de Prompt: (se a composição for fraca, sugira um prompt para gerar uma nova imagem, começando com 'Sugestão de Prompt:')"
+          "Sugestão de Prompt: (se aplicável)"
         ]
       }}
-      Seja rigoroso e forneça recomendações práticas e acionáveis.
+      ```
+
+      **Instruções Detalhadas para Pontuação e Recomendações:**
+
+      1.  **Legibilidade do Texto (score):**
+          -   **Alto (85-100):** Texto grande, fonte forte (bold/heavy), ótimo contraste, poucas palavras.
+          -   **Médio (50-84):** Texto legível, mas poderia ser maior, ter mais contraste ou ser mais conciso.
+          -   **Baixo (0-49):** Texto pequeno, difícil de ler, fonte fina, baixo contraste, muitas palavras.
+          -   **Recomendação:** Se a pontuação for baixa, sugira ações como "Aumente o tamanho da fonte" ou "Use um contorno no texto para destacá-lo".
+
+      2.  **Impacto Emocional (score):**
+          -   **Alto (85-100):** Rosto humano visível em close-up, com emoção clara e forte (surpresa, choque, alegria intensa).
+          -   **Médio (50-84):** Rosto visível, mas com emoção neutra ou pouco expressiva.
+          -   **Baixo (0-49):** Sem rosto humano ou o rosto está muito distante/obscurecido.
+          -   **Recomendação:** Se a pontuação for baixa, sugira "Adicione um rosto com uma expressão de surpresa para gerar curiosidade".
+
+      3.  **Foco e Composição (score):**
+          -   **Alto (85-100):** Composição limpa, ponto de foco claro (regra dos terços), poucos elementos que não distraem.
+          -   **Médio (50-84):** A composição é boa, mas um pouco poluída ou o ponto focal não é imediato.
+          -   **Baixo (0-49):** Composição confusa, muitos elementos, sem hierarquia visual.
+          -   **Recomendação:** Se a pontuação for baixa, sugira "Simplifique a imagem removendo elementos de fundo" ou "Crie um ponto de foco mais forte".
+
+      4.  **Uso de Cores (score):**
+          -   **Alto (85-100):** Cores vibrantes, saturadas, com alto contraste entre o objeto principal e o fundo. Uso eficaz de cores complementares.
+          -   **Médio (50-84):** As cores são boas, mas poderiam ser mais saturadas ou ter mais contraste.
+          -   **Baixo (0-49):** Cores opacas, sem vida, baixo contraste, paleta de cores confusa.
+          -   **Recomendação:** Se a pontuação for baixa, sugira "Aumente a saturação das cores" ou "Use uma cor quente (amarelo, laranja) para destacar o texto".
+
+      5.  **Relevância (Contexto) (score):**
+          -   **Alto (85-100):** A imagem representa perfeitamente a promessa do título e se encaixa no nicho. Ex: Título sobre "erro de programação" mostra um código com um grande 'X' vermelho.
+          -   **Médio (50-84):** A imagem tem relação com o tema, mas poderia ser mais direta ou intrigante.
+          -   **Baixo (0-49):** Imagem genérica, que não se conecta claramente com o título.
+          -   **Recomendação:** Se a pontuação for baixa, sugira "Adicione um elemento visual que represente diretamente o tópico '{title}'".
+
+      **Regra para a Geração de Prompt:**
+      -   **SE** a pontuação de "Foco e Composição" for **menor que 70**, você **DEVE** incluir uma recomendação começando com `"Sugestão de Prompt:"`.
+      -   O prompt deve ser criativo e diretamente relacionado ao título e nicho do vídeo para ser usado em geradores de imagem como Midjourney ou DALL-E.
+      -   Exemplo de prompt: `"Sugestão de Prompt: Um cérebro humano feito de circuitos de neon brilhantes, em um fundo escuro, estilo cyberpunk, fotorrealista --ar 16:9"`
     """
 
 if __name__ == '__main__':
