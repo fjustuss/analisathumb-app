@@ -71,19 +71,22 @@ def analyze_endpoint():
              raise ValueError("Resposta da API Gemini inválida: sem 'candidates'.")
         
         result_text = result_json['candidates'][0]['content']['parts'][0]['text']
-        final_json = json.loads(result_text.replace("```json", "").replace("```", "").strip())
+        cleaned_result = result_text.replace("```json", "").replace("```", "").strip()
+        final_json = json.loads(cleaned_result)
         
-        # --- NOVA VALIDAÇÃO DA RESPOSTA ---
-        # Verifica se a estrutura do JSON recebido da IA está correta antes de enviar ao frontend.
+        # --- LOG ADICIONAL PARA DEBUG ---
+        # Imprime a estrutura exata do JSON recebido da IA para diagnóstico.
+        app.logger.info(f"JSON recebido da IA: {json.dumps(final_json, indent=2)}")
+        
+        # --- Validação da Resposta ---
         if is_comparison:
             if not all(k in final_json for k in ["analysis_type", "version_a", "version_b", "comparison_result"]):
                 raise ValueError("A resposta JSON da IA para comparação está mal formatada.")
-        else: # Análise simples
+        else:
             if not all(k in final_json for k in ["analysis_type", "details", "recommendations"]):
                 raise ValueError("A resposta JSON da IA para análise simples está mal formatada.")
             if not isinstance(final_json.get('details'), list):
                  raise TypeError("O campo 'details' na resposta da IA não é uma lista.")
-        # --- FIM DA VALIDAÇÃO ---
 
         return jsonify(final_json)
 
