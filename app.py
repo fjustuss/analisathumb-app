@@ -27,7 +27,6 @@ def analyze_endpoint():
 
         image_a_data_url = data.get('image_a_data_url')
         if not image_a_data_url:
-            app.logger.error("Requisição recebida sem a imagem principal (image_a_data_url).")
             return jsonify({"error": "A imagem principal não foi enviada. Por favor, tente novamente."}), 400
 
         title = data.get('title')
@@ -74,11 +73,9 @@ def analyze_endpoint():
         cleaned_result = result_text.replace("```json", "").replace("```", "").strip()
         final_json = json.loads(cleaned_result)
         
-        # --- LOG ADICIONAL PARA DEBUG ---
-        # Imprime a estrutura exata do JSON recebido da IA para diagnóstico.
         app.logger.info(f"JSON recebido da IA: {json.dumps(final_json, indent=2)}")
         
-        # --- Validação da Resposta ---
+        # Validação da Resposta
         if is_comparison:
             if not all(k in final_json for k in ["analysis_type", "version_a", "version_b", "comparison_result"]):
                 raise ValueError("A resposta JSON da IA para comparação está mal formatada.")
@@ -103,20 +100,76 @@ def health_check():
     return "Backend do AnalisaThumb (Gemini Edition) está no ar!"
 
 def create_single_analysis_prompt(title, niche, language):
-    # O prompt permanece o mesmo
+    """Cria um prompt muito mais explícito para garantir o formato correto da resposta."""
     return f"""
       Você é o AnalisaThumb, um especialista de classe mundial em otimização de thumbnails do YouTube.
       **Contexto:** Título: "{title or 'Não fornecido'}", Nicho: "{niche}", Idioma: {language}.
-      **Tarefa:** Analise a thumbnail e retorne um JSON com a chave "analysis_type" como "single", e os campos "details", "recommendations", "suggested_titles", "trend_analysis", e "color_palette".
-      Para as recomendações, seja específico: sugira fontes (ex: 'Impact'), cores (ex: 'texto amarelo com contorno preto'), e layout (ex: 'rosto na direita, texto na esquerda'). Se a composição for fraca, inclua uma recomendação que comece com "Sugestão de Prompt:".
+      **Tarefa:** Analise a thumbnail e retorne um JSON com a chave "analysis_type" como "single".
+      
+      **Formato de Saída OBRIGATÓRIO:**
+      Sua resposta deve ser APENAS o objeto JSON. O campo "details" DEVE ser uma lista (array) de objetos. Cada objeto deve ter as chaves "name" e "score".
+
+      Exemplo da estrutura correta:
+      ```json
+      {{
+        "analysis_type": "single",
+        "details": [
+          {{"name": "Legibilidade do Texto", "score": 85}},
+          {{"name": "Impacto Emocional", "score": 70}},
+          {{"name": "Foco e Composição", "score": 90}},
+          {{"name": "Uso de Cores", "score": 80}},
+          {{"name": "Relevância (Contexto)", "score": 95}}
+        ],
+        "recommendations": [
+          "Recomendação específica sobre a fonte...",
+          "Sugestão de Prompt: cinematic photo of..."
+        ]
+      }}
+      ```
+      **Instruções para Recomendações:**
+      - Para **Legibilidade**, se a pontuação for baixa, sugira uma fonte específica de alto impacto (Ex: 'Impact', 'Anton') e uma combinação de cores.
+      - Para **Composição**, se a pontuação for baixa, sugira uma mudança de layout clara (Ex: 'Posicione o rosto na direita e o texto na esquerda.').
+      - **Regra OBRIGATÓRIA:** Se a pontuação de "Foco e Composição" for menor que 75, inclua uma recomendação que comece com "Sugestão de Prompt:". O prompt deve ser em inglês.
     """
 
 def create_comparison_prompt(title, niche, language):
-    # O prompt permanece o mesmo
+    """Cria um prompt muito mais explícito para a comparação."""
     return f"""
       Você é o AnalisaThumb, um especialista em otimização de thumbnails.
       **Contexto:** Título: "{title or 'Não fornecido'}", Nicho: "{niche}", Idioma: {language}.
-      **Tarefa:** Analise a Imagem A (primeira) e a Imagem B (segunda). Retorne um JSON com "analysis_type" como "comparison". O JSON deve conter "version_a" e "version_b", cada um com um array "details" de 5 critérios pontuados de 0-100. Inclua também um objeto "comparison_result" com uma chave "winner" ("Versão A" ou "Versão B") e uma "justification" explicando a escolha.
+      **Tarefa:** Analise a Imagem A (primeira) e a Imagem B (segunda).
+      
+      **Formato de Saída OBRIGATÓRIO:**
+      Retorne um JSON com "analysis_type" como "comparison". O JSON DEVE conter "version_a" e "version_b", cada um com um array "details" de 5 objetos (com "name" e "score"). Inclua também um objeto "comparison_result" com "winner" e "justification".
+      
+      Exemplo da estrutura correta:
+       ```json
+      {{
+        "analysis_type": "comparison",
+        "version_a": {{
+          "details": [
+            {{"name": "Legibilidade do Texto", "score": 80}},
+            {{"name": "Impacto Emocional", "score": 90}},
+            {{"name": "Foco e Composição", "score": 75}},
+            {{"name": "Uso de Cores", "score": 85}},
+            {{"name": "Relevância (Contexto)", "score": 95}}
+          ]
+        }},
+        "version_b": {{
+          "details": [
+            {{"name": "Legibilidade do Texto", "score": 85}},
+            {{"name": "Impacto Emocional", "score": 80}},
+            {{"name": "Foco e Composição", "score": 85}},
+            {{"name": "Uso de Cores", "score": 90}},
+            {{"name": "Relevância (Contexto)", "score": 90}}
+          ]
+        }},
+        "comparison_result": {{
+            "winner": "Versão B",
+            "justification": "A Versão B vence pois tem um ponto focal mais claro e cores mais vibrantes, o que é mais eficaz para o nicho de '{niche}'."
+        }}
+      }}
+      ```
     """
 
 if __name__ == '__main__':
