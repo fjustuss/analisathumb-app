@@ -19,6 +19,7 @@
         .recommendations-list::-webkit-scrollbar-track, .titles-list::-webkit-scrollbar-track { background: #1f2937; }
         .recommendations-list::-webkit-scrollbar-thumb, .titles-list::-webkit-scrollbar-thumb { background-color: #4f46e5; border-radius: 20px; border: 3px solid #1f2937; }
         .prompt-suggestion { background-color: rgba(79, 70, 229, 0.1); border-left: 4px solid #4f46e5; padding: 10px; border-radius: 4px; font-family: monospace; font-size: 0.9em; color: #e5e7eb; }
+        .copy-btn { transition: color 0.2s ease-in-out; }
     </style>
 </head>
 <body class="bg-gray-900 text-gray-200 min-h-screen flex flex-col items-center justify-center p-4">
@@ -317,19 +318,20 @@ function displayResults(results) {
 
     el.recommendationsList.innerHTML = '';
     results.recommendations.forEach(rec => {
+        const textToCopy = rec.startsWith('Sugestão de Prompt:') ? rec.substring(18).trim() : rec;
         const isPrompt = rec.startsWith('Sugestão de Prompt:');
-        const content = isPrompt ? `<div class="prompt-suggestion">${rec.replace('Sugestão de Prompt:', '')}</div>` : `<span>${rec}</span>`;
+        const content = isPrompt ? `<div class="prompt-suggestion">${textToCopy}</div>` : `<span>${rec}</span>`;
         const icon = !isPrompt ? '<svg class="w-5 h-5 mr-3 text-indigo-400 flex-shrink-0 mt-0.5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 15-5-5 1.41-1.41L11 14.17l7.59-7.59L20 8l-9 9z"></path></svg>' : '';
-        el.recommendationsList.innerHTML += `<li class="flex items-start">${icon}${content}</li>`;
+        el.recommendationsList.innerHTML += `<li class="flex items-start">${icon}<div class="flex-grow">${content}</div><button class="ml-2 p-1 text-gray-400 hover:text-white copy-btn" onclick="copyToClipboard(this, \`${textToCopy}\`)"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg></button></li>`;
     });
 
     el.titlesList.innerHTML = '';
     if (results.suggested_titles && results.suggested_titles.length > 0) {
         results.suggested_titles.forEach(title => {
             const titleItem = `
-                <li class="flex items-center p-2 bg-gray-800/50 rounded-md">
-                    <svg class="w-5 h-5 mr-3 text-indigo-400 flex-shrink-0" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" /></svg>
-                    <span>${title}</span>
+                <li class="flex items-center justify-between p-2 bg-gray-800/50 rounded-md">
+                    <div class="flex items-center"><svg class="w-5 h-5 mr-3 text-indigo-400 flex-shrink-0" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" /></svg><span>${title}</span></div>
+                    <button class="ml-2 p-1 text-gray-400 hover:text-white copy-btn" onclick="copyToClipboard(this, \`${title}\`)"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg></button>
                 </li>
             `;
             el.titlesList.innerHTML += titleItem;
@@ -350,9 +352,9 @@ function displayResults(results) {
     if (results.color_palette && results.color_palette.length > 0) {
         results.color_palette.forEach(color => {
             const colorItem = `
-                <div class="text-center">
+                <div class="text-center cursor-pointer" onclick="copyToClipboard(this.querySelector('p'), '${color}')">
                     <div class="w-16 h-16 rounded-lg border-2 border-gray-600 shadow-md" style="background-color: ${color};"></div>
-                    <p class="text-sm font-mono mt-2">${color}</p>
+                    <p class="text-sm font-mono mt-2 text-gray-400">${color}</p>
                 </div>
             `;
             el.colorPaletteContainer.innerHTML += colorItem;
@@ -360,6 +362,26 @@ function displayResults(results) {
         el.colorPaletteSection.classList.remove('hidden');
     } else {
         el.colorPaletteSection.classList.add('hidden');
+    }
+}
+
+function copyToClipboard(element, text) {
+    const textarea = document.createElement('textarea');
+    textarea.value = text;
+    document.body.appendChild(textarea);
+    textarea.select();
+    document.execCommand('copy');
+    document.body.removeChild(textarea);
+
+    const originalContent = element.innerHTML;
+    const isColorElement = element.tagName === 'P';
+
+    if (isColorElement) {
+        element.textContent = 'Copiado!';
+        setTimeout(() => { element.textContent = text; }, 1500);
+    } else {
+       element.innerHTML = '<svg class="w-4 h-4 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>';
+       setTimeout(() => { element.innerHTML = originalContent; }, 1500);
     }
 }
 
