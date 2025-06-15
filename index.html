@@ -3,78 +3,91 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AnalisaThumb - Análise de Thumbnail com IA</title>
+    <title>AnalisaThumb - Análise e Geração com IA</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="style.css">
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        .gradient-text { background: linear-gradient(90deg, #4f46e5, #ec4899); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .score-circle { transition: stroke-dashoffset 0.8s ease-out; }
+        .progress-bar-fill { transition: width 0.8s ease-out; }
+        .tab-active { border-color: #4f46e5; color: #4f46e5; background-color: rgba(79, 70, 229, 0.1); }
+        .tab-inactive { border-color: #4b5563; color: #d1d5db; }
+        .recommendations-list::-webkit-scrollbar, .titles-list::-webkit-scrollbar { width: 8px; }
+        .recommendations-list::-webkit-scrollbar-track, .titles-list::-webkit-scrollbar-track { background: #1f2937; }
+        .recommendations-list::-webkit-scrollbar-thumb, .titles-list::-webkit-scrollbar-thumb { background-color: #4f46e5; border-radius: 20px; border: 3px solid #1f2937; }
+        .prompt-suggestion { background-color: rgba(79, 70, 229, 0.1); border-left: 4px solid #4f46e5; padding: 10px; border-radius: 4px; font-family: monospace; font-size: 0.9em; color: #e5e7eb; }
+        .copy-btn { transition: color 0.2s ease-in-out; }
+    </style>
 </head>
 <body class="bg-gray-900 text-gray-200 min-h-screen flex flex-col items-center justify-center p-4">
 
-    <div class="w-full max-w-5xl mx-auto">
+    <div class="w-full max-w-4xl mx-auto">
         <header class="text-center mb-6 relative">
             <h1 class="text-4xl md:text-5xl font-extrabold gradient-text">AnalisaThumb</h1>
-            <p class="text-gray-400 mt-2 text-lg">Potencialize seu CTR com a análise do Gemini.</p>
+            <p class="text-gray-400 mt-2 text-lg">Análise e Geração de Thumbnails com IA.</p>
         </header>
 
         <div id="app-container" class="bg-gray-800/50 backdrop-blur-sm p-6 md:p-8 rounded-2xl shadow-2xl border border-gray-700">
             <div id="input-section">
-                <!-- Toggle A/B Test -->
-                <div class="flex items-center justify-center mb-6">
-                    <label for="ab-test-toggle" class="flex items-center cursor-pointer">
-                        <span class="mr-3 text-sm font-medium text-gray-300">Análise Simples</span>
-                        <div class="relative">
-                            <input type="checkbox" id="ab-test-toggle" class="sr-only">
-                            <div class="toggle-bg block bg-gray-600 w-11 h-6 rounded-full"></div>
-                        </div>
-                        <span class="ml-3 text-sm font-medium text-gray-300">Comparar (Teste A/B)</span>
-                    </label>
+                <!-- Seção de Inputs (Tabs, Upload, Contexto) - Sem alterações -->
+                <div class="flex border-b border-gray-700 mb-6">
+                    <button id="tab-upload" class="flex-1 py-3 px-4 text-center font-semibold border-b-2 transition-colors duration-300 tab-active">Enviar Imagem</button>
+                    <button id="tab-url" class="flex-1 py-3 px-4 text-center font-semibold border-b-2 transition-colors duration-300 tab-inactive">Colar URL</button>
                 </div>
-
-                <!-- Single Analysis Upload -->
-                <div id="single-analysis-container">
-                     <label for="image-upload-single" class="flex flex-col items-center justify-center w-full h-40 border-2 border-gray-600 border-dashed rounded-lg cursor-pointer bg-gray-900/50 hover:bg-gray-800/60"><div class="text-center"><svg class="w-8 h-8 mx-auto mb-4 text-gray-500" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 20 16"><path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 13h3a3 3 0 0 0 0-6h-.025A5.56 5.56 0 0 0 16 6.5 5.5 5.5 0 0 0 5.207 5.021C5.137 5.017 5.071 5 5 5a4 4 0 0 0 0 8h2.167M10 15V6m0 0L8 8m2-2 2 2"/></svg><p class="mb-2 text-sm text-gray-400"><span class="font-semibold">Clique para enviar</span> ou arraste a Thumbnail</p></div><input id="image-upload-single" type="file" class="hidden" accept="image/png, image/jpeg, image/webp" /></label>
+                <div id="form-upload">
+                     <label for="image-upload" class="flex flex-col items-center justify-center w-full h-40 border-2 border-gray-600 border-dashed rounded-lg cursor-pointer bg-gray-900/50 hover:bg-gray-800/60"><div class="text-center"><svg class="w-8 h-8 mx-auto mb-4 text-gray-500" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 20 16"><path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 13h3a3 3 0 0 0 0-6h-.025A5.56 5.56 0 0 0 16 6.5 5.5 5.5 0 0 0 5.207 5.021C5.137 5.017 5.071 5 5 5a4 4 0 0 0 0 8h2.167M10 15V6m0 0L8 8m2-2 2 2"/></svg><p class="mb-2 text-sm text-gray-400"><span class="font-semibold">Clique para enviar</span> ou arraste</p><p class="text-xs text-gray-500">PNG, JPG (MAX. 5MB)</p></div><input id="image-upload" type="file" class="hidden" accept="image/png, image/jpeg, image/webp" /></label>
                 </div>
-
-                <!-- A/B Comparison Upload -->
-                <div id="comparison-container" class="hidden">
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                            <p class="text-center font-semibold mb-2">Versão A</p>
-                            <label for="image-upload-a" class="flex flex-col items-center justify-center w-full h-40 border-2 border-gray-600 border-dashed rounded-lg cursor-pointer bg-gray-900/50 hover:bg-gray-800/60"><div class="text-center"><svg class="w-8 h-8 mx-auto mb-4 text-gray-500" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 20 16"><path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 13h3a3 3 0 0 0 0-6h-.025A5.56 5.56 0 0 0 16 6.5 5.5 5.5 0 0 0 5.207 5.021C5.137 5.017 5.071 5 5 5a4 4 0 0 0 0 8h2.167M10 15V6m0 0L8 8m2-2 2 2"/></svg><p class="mb-2 text-sm text-gray-400">Enviar ou arrastar</p></div><input id="image-upload-a" type="file" class="hidden" accept="image/png, image/jpeg, image/webp" /></label>
-                        </div>
-                        <div>
-                            <p class="text-center font-semibold mb-2">Versão B</p>
-                            <label for="image-upload-b" class="flex flex-col items-center justify-center w-full h-40 border-2 border-gray-600 border-dashed rounded-lg cursor-pointer bg-gray-900/50 hover:bg-gray-800/60"><div class="text-center"><svg class="w-8 h-8 mx-auto mb-4 text-gray-500" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 20 16"><path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 13h3a3 3 0 0 0 0-6h-.025A5.56 5.56 0 0 0 16 6.5 5.5 5.5 0 0 0 5.207 5.021C5.137 5.017 5.071 5 5 5a4 4 0 0 0 0 8h2.167M10 15V6m0 0L8 8m2-2 2 2"/></svg><p class="mb-2 text-sm text-gray-400">Enviar ou arrastar</p></div><input id="image-upload-b" type="file" class="hidden" accept="image/png, image/jpeg, image/webp" /></label>
-                        </div>
-                    </div>
+                <div id="form-url" class="hidden">
+                     <div class="relative"><input type="url" id="youtube-url" class="w-full bg-gray-900/80 border-2 border-gray-600 rounded-lg p-3" placeholder="https://www.youtube.com/watch?v=..."><svg class="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M18.344 15.271L20.5 13.75l-2.156-1.521a9.963 9.963 0 0 0-.219-3.332l1.219-1.875-1.5-1.5-1.875 1.219a9.963 9.963 0 0 0-3.332-.219L11.25 4.5h-2.5L7.229 6.656a9.963 9.963 0 0 0-3.332.219L2.021 5.656l-1.5 1.5 1.219 1.875a9.963 9.963 0 0 0-.219 3.332L-1.5 13.75l1.5 1.521L2.156 16.8a9.963 9.963 0 0 0 .219 3.332l-1.219 1.875 1.5 1.5 1.875-1.219a9.963 9.963 0 0 0 3.332.219L8.75 24.5h2.5l1.521-2.156a9.963 9.963 0 0 0 3.332-.219l1.875 1.219 1.5-1.5-1.219-1.875a9.963 9.963 0 0 0 .219-3.332zM10 16a4 4 0 1 1 0-8 4 4 0 0 1 0 8z"></path></svg></div>
                 </div>
-                
                 <div id="context-inputs-container" class="hidden mt-6 space-y-4">
-                    <!-- Preview Area -->
-                    <div id="preview-area" class="grid grid-cols-1 md:grid-cols-1 gap-4 place-items-center">
-                        <img id="image-preview-a" src="" alt="Pré-visualização A" class="w-full max-w-xs mx-auto rounded-lg shadow-lg border-2 border-gray-700">
-                        <img id="image-preview-b" src="" alt="Pré-visualização B" class="w-full max-w-xs mx-auto rounded-lg shadow-lg border-2 border-gray-700 hidden">
-                    </div>
-                    <!-- Context Fields -->
+                    <p class="text-sm font-semibold text-gray-400 text-center">Pré-visualização e Contexto</p>
+                    <img id="image-preview" src="" alt="Pré-visualização" class="max-w-xs mx-auto rounded-lg shadow-lg border-2 border-gray-700">
                     <div class="max-w-md mx-auto grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div class="text-left"><label for="language-select" class="block mb-2 text-sm font-medium">Idioma</label><select id="language-select" class="w-full bg-gray-900 border border-gray-600 rounded-lg p-2.5"><option selected value="português">Português</option><option value="english">English (Inglês)</option></select></div>
-                        <div class="text-left"><label for="niche-select" class="block mb-2 text-sm font-medium">Nicho</label><select id="niche-select" class="w-full bg-gray-900 border border-gray-600 rounded-lg p-2.5"><option selected>Tecnologia / IA</option><option>Games</option><option>Finanças</option><option value="Outro">Outro</option></select></div>
+                        <div class="text-left"><label for="language-select" class="block mb-2 text-sm font-medium">Idioma</label><select id="language-select" class="w-full bg-gray-900 border border-gray-600 rounded-lg p-2.5"><option selected value="português">Português</option></select></div>
+                        <div class="text-left"><label for="niche-select" class="block mb-2 text-sm font-medium">Nicho</label><select id="niche-select" class="w-full bg-gray-900 border border-gray-600 rounded-lg p-2.5"><option selected>Tecnologia / IA</option></select></div>
                     </div>
                     <div class="max-w-md mx-auto text-left"><div id="custom-niche-container" class="hidden"><input type="text" id="custom-niche-input" class="w-full bg-gray-900 border border-gray-600 rounded-lg p-2.5" placeholder="Digite seu nicho..."></div></div>
                     <div class="max-w-md mx-auto text-left"><label for="video-title-input" class="block mb-2 text-sm font-medium">Título do Vídeo</label><input type="text" id="video-title-input" class="w-full bg-gray-900 border border-gray-600 rounded-lg p-2.5" placeholder="Ex: 5 Segredos da IA..."></div>
                 </div>
-
-                <div class="mt-8 text-center"><button id="analyze-button" class="bg-indigo-600 text-white font-bold py-3 px-10 rounded-lg hover:bg-indigo-500 disabled:bg-gray-600" disabled>Analisar</button></div>
+                <div class="mt-8 text-center"><button id="analyze-button" class="bg-indigo-600 text-white font-bold py-3 px-10 rounded-lg hover:bg-indigo-500 transition-all disabled:bg-gray-600 disabled:cursor-not-allowed" disabled>Analisar</button></div>
             </div>
 
-            <div id="loading-spinner" class="hidden text-center py-20">
-                <div role="status">
-                    <svg aria-hidden="true" class="inline w-12 h-12 text-gray-600 animate-spin fill-indigo-500" viewBox="0 0 100 101" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M100 50.5908C100 78.2051 77.6142 100.591 50 100.591C22.3858 100.591 0 78.2051 0 50.5908C0 22.9766 22.3858 0.59082 50 0.59082C77.6142 0.59082 100 22.9766 100 50.5908ZM9.08144 50.5908C9.08144 73.1895 27.4013 91.5094 50 91.5094C72.5987 91.5094 90.9186 73.1895 90.9186 50.5908C90.9186 27.9921 72.5987 9.67226 50 9.67226C27.4013 9.67226 9.08144 27.9921 9.08144 50.5908Z" fill="currentColor"/><path d="M93.9676 39.0409C96.393 38.4038 97.8624 35.9116 97.0079 33.5539C95.2932 28.8227 92.871 24.3692 89.8167 20.348C85.8452 15.1192 80.8826 10.7238 75.2124 7.41289C69.5422 4.10194 63.2754 1.94025 56.7698 1.05124C51.7666 0.367541 46.6976 0.446843 41.7345 1.27873C39.2613 1.69328 37.813 4.19778 38.4501 6.62326C39.0873 9.04874 41.5694 10.4717 44.0505 10.1071C47.8511 9.54855 51.7191 9.52689 55.5402 10.0492C60.8642 10.7766 65.9928 12.5457 70.6331 15.2552C75.2735 17.9648 79.3347 21.5619 82.5849 25.841C84.9175 28.9121 86.7997 32.2913 88.1811 35.8758C89.083 38.2158 91.5421 39.6781 93.9676 39.0409Z" fill="currentFill"/></svg><p id="loading-text" class="mt-4 text-lg text-gray-400">Analisando...</p></div>
+            <div id="loading-spinner" class="hidden text-center py-20"><div role="status"><svg id="loading-svg" aria-hidden="true" class="inline w-12 h-12 text-gray-600 animate-spin fill-indigo-500" viewBox="0 0 100 101" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M100 50.5908C100 78.2051 77.6142 100.591 50 100.591C22.3858 100.591 0 78.2051 0 50.5908C0 22.9766 22.3858 0.59082 50 0.59082C77.6142 0.59082 100 22.9766 100 50.5908ZM9.08144 50.5908C9.08144 73.1895 27.4013 91.5094 50 91.5094C72.5987 91.5094 90.9186 73.1895 90.9186 50.5908C90.9186 27.9921 72.5987 9.67226 50 9.67226C27.4013 9.67226 9.08144 27.9921 9.08144 50.5908Z" fill="currentColor"/><path d="M93.9676 39.0409C96.393 38.4038 97.8624 35.9116 97.0079 33.5539C95.2932 28.8227 92.871 24.3692 89.8167 20.348C85.8452 15.1192 80.8826 10.7238 75.2124 7.41289C69.5422 4.10194 63.2754 1.94025 56.7698 1.05124C51.7666 0.367541 46.6976 0.446843 41.7345 1.27873C39.2613 1.69328 37.813 4.19778 38.4501 6.62326C39.0873 9.04874 41.5694 10.4717 44.0505 10.1071C47.8511 9.54855 51.7191 9.52689 55.5402 10.0492C60.8642 10.7766 65.9928 12.5457 70.6331 15.2552C75.2735 17.9648 79.3347 21.5619 82.5849 25.841C84.9175 28.9121 86.7997 32.2913 88.1811 35.8758C89.083 38.2158 91.5421 39.6781 93.9676 39.0409Z" fill="currentFill"/></svg><p id="loading-text" class="mt-4 text-lg text-gray-400">Analisando...</p></div>
             </div>
             
-            <div id="results-section" class="hidden"></div>
+            <div id="results-section" class="hidden">
+                 <!-- Seção de Resultados (Score, Detalhes, etc.) -->
+                 <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 md:gap-8">
+                    <div class="lg:col-span-1 bg-gray-900/50 p-6 rounded-xl flex flex-col items-center justify-center border border-gray-700">
+                        <h2 class="text-xl font-bold mb-4 text-center">Pontuação Final</h2>
+                        <div class="relative w-48 h-48"><svg class="w-full h-full" viewBox="0 0 100 100"><circle class="text-gray-700" stroke-width="10" stroke="currentColor" fill="transparent" r="45" cx="50" cy="50" /><circle id="score-circle-progress" class="score-circle text-indigo-500" stroke-width="10" stroke-linecap="round" stroke="currentColor" fill="transparent" r="45" cx="50" cy="50" style="stroke-dasharray: 283; stroke-dashoffset: 283;" /></svg><div id="score-text" class="absolute inset-0 flex items-center justify-center text-5xl font-extrabold gradient-text">0</div></div>
+                        <img id="result-image-preview" src="" alt="Thumbnail Analisada" class="mt-6 w-full rounded-lg shadow-lg border-2 border-gray-600">
+                    </div>
+                    <div class="lg:col-span-2">
+                        <div class="bg-gray-900/50 p-6 rounded-xl border border-gray-700 mb-6"><h3 class="text-xl font-bold mb-5">Análise Detalhada</h3><div id="detailed-analysis-container" class="space-y-4"></div></div>
+                        <div class="bg-gray-900/50 p-6 rounded-xl border border-gray-700"><h3 class="text-xl font-bold mb-4">Recomendações para Melhorar</h3><ul id="recommendations-list" class="space-y-3 h-48 overflow-y-auto pr-2 recommendations-list"></ul></div>
+                    </div>
+                 </div>
+                 <!-- Outras seções de resultados -->
+                 <div id="suggested-titles-section" class="hidden mt-6 bg-gray-900/50 p-6 rounded-xl border border-gray-700">
+                    <h3 class="text-xl font-bold mb-4">Sugestões de Títulos Otimizados</h3><ul id="titles-list" class="space-y-3 titles-list"></ul>
+                 </div>
+                 <div id="color-palette-section" class="hidden mt-6 bg-gray-900/50 p-6 rounded-xl border border-gray-700">
+                    <h3 class="text-xl font-bold mb-4">Paleta de Cores Sugerida</h3><div id="color-palette-container" class="flex justify-center gap-4"></div>
+                 </div>
+                 <!-- NOVA SEÇÃO PARA IMAGEM GERADA -->
+                 <div id="generated-image-section" class="hidden mt-6 bg-gray-900/50 p-6 rounded-xl border border-gray-700 text-center">
+                    <h3 class="text-xl font-bold mb-4">Nova Thumbnail Gerada com IA</h3>
+                    <div id="generated-image-container" class="flex justify-center items-center">
+                        <!-- A imagem ou um spinner de geração aparecerá aqui -->
+                    </div>
+                 </div>
+                 <div class="mt-8 flex justify-center"><button id="restart-button" class="bg-gray-600 text-white font-bold py-3 px-10 rounded-lg hover:bg-gray-500">Analisar Outra</button></div>
+            </div>
         </div>
         
         <footer class="text-center text-gray-600 text-sm mt-8"><p>&copy; 2024 AnalisaThumb. Todos os direitos reservados.</p></footer>
