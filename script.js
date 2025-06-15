@@ -1,5 +1,5 @@
 // ===================================================================================
-// ANALISATHUMB - JAVASCRIPT PRINCIPAL (VERSÃO CORRIGIDA)
+// ANALISATHUMB - JAVASCRIPT PRINCIPAL
 // ===================================================================================
 
 // --- 1. SELETORES DE ELEMENTOS DO DOM ---
@@ -8,9 +8,8 @@ const DOMElements = {
     inputSection: document.getElementById('input-section'),
     abToggle: document.getElementById('ab-test-toggle'),
     
-    // Os uploaders agora são apenas A e B
-    uploadA_label: document.querySelector('label[for="image-upload-a"]'),
-    uploadB_label: document.querySelector('label[for="image-upload-b"]'),
+    labelVersionA: document.getElementById('label-version-a'),
+    uploaderB: document.getElementById('uploader-b'),
     uploadA: document.getElementById('image-upload-a'),
     uploadB: document.getElementById('image-upload-b'),
     
@@ -50,26 +49,16 @@ function setupEventListeners() {
     });
 }
 
-// --- 5. LÓGICA DE CONTROLE DA INTERFACE (REATORADA) ---
+// --- 5. LÓGICA DE CONTROLE DA INTERFACE ---
 
 function toggleComparisonMode() {
     isComparisonMode = DOMElements.abToggle.checked;
 
-    // Apenas mostra ou esconde a parte da "Versão B"
-    if (DOMElements.uploadB_label) {
-        DOMElements.uploadB_label.parentElement.classList.toggle('hidden', !isComparisonMode);
-    }
+    DOMElements.uploaderB.classList.toggle('hidden', !isComparisonMode);
     DOMElements.previewB.classList.toggle('hidden', !isComparisonMode);
     
-    // Ajusta o grid de preview
     DOMElements.previewArea.classList.toggle('md:grid-cols-2', isComparisonMode);
-    DOMElements.previewArea.classList.toggle('md:grid-cols-1', !isComparisonMode);
-
-    // Renomeia a label da Versão A se estiver no modo simples
-    if (DOMElements.uploadA_label) {
-        const labelText = DOMElements.uploadA_label.parentElement.querySelector('p');
-        if(labelText) labelText.textContent = isComparisonMode ? 'Versão A' : 'Thumbnail Principal';
-    }
+    DOMElements.labelVersionA.textContent = isComparisonMode ? 'Versão A' : 'Thumbnail Principal';
     
     resetInputs();
 }
@@ -78,22 +67,22 @@ function handleImageUpload(event, version) {
     const file = event.target.files[0];
     if (!file) return;
 
-    if (file.size > 5 * 1024 * 1024) { // 5MB limit
+    if (file.size > 5 * 1024 * 1024) { 
         alert("Imagem muito grande (MAX. 5MB).");
         return;
     }
 
     const reader = new FileReader();
     reader.onload = e => {
+        DOMElements.contextInputsContainer.classList.remove('hidden');
         if (version === 'A') {
             imageA_Data = e.target.result;
             DOMElements.previewA.src = imageA_Data;
-            DOMElements.previewA.classList.remove('hidden'); // Garante que a preview A seja visível
+            DOMElements.previewA.classList.remove('hidden');
         } else {
             imageB_Data = e.target.result;
             DOMElements.previewB.src = imageB_Data;
         }
-        DOMElements.contextInputsContainer.classList.remove('hidden');
         checkAnalysisButtonState();
     };
     reader.readAsDataURL(file);
@@ -114,8 +103,11 @@ function resetInputs() {
     DOMElements.uploadB.value = '';
     DOMElements.previewA.src = '';
     DOMElements.previewB.src = '';
-    DOMElements.previewA.classList.add('hidden'); // Esconde as previews ao resetar
-    DOMElements.previewB.classList.add('hidden');
+    DOMElements.previewA.classList.add('hidden');
+    // Só esconde a preview B se ela realmente existir no DOM
+    if(DOMElements.previewB) {
+        DOMElements.previewB.classList.add('hidden');
+    }
     DOMElements.contextInputsContainer.classList.add('hidden');
     DOMElements.analyzeButton.disabled = true;
 }
@@ -203,8 +195,8 @@ function copyToClipboard(element, text) {
         element.textContent = 'Copiado!';
         setTimeout(() => { element.textContent = text; }, 1500);
     } else {
-    element.innerHTML = '<svg class="w-4 h-4 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>';
-    setTimeout(() => { element.innerHTML = originalContent; }, 1500);
+        element.innerHTML = '<svg class="w-4 h-4 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>';
+        setTimeout(() => { element.innerHTML = originalContent; }, 1500);
     }
 }
 
@@ -265,7 +257,7 @@ function createSingleResultHTML(data) {
                 <div class="bg-gray-900/50 p-6 rounded-xl border border-gray-700"><h3 class="text-xl font-bold mb-4">Recomendações para Melhorar</h3><ul class="space-y-3 h-48 overflow-y-auto pr-2 recommendations-list">${recommendationsHTML}</ul></div>
             </div>
         </div>
-        <div class="mt-6 bg-gray-900/50 p-6 rounded-xl border border-gray-700"><h3 class="text-xl font-bold mb-4">Análise de Tendências do Nicho</h3><p class="text-gray-300">${data.trend_analysis}</p></div>
+        <div class="mt-6 bg-gray-900/50 p-6 rounded-xl border border-gray-700"><h3 class="text-xl font-bold mb-4">Análise de Tendências do Nicho</h3><p id="trend-analysis-text" class="text-gray-300">${data.trend_analysis}</p></div>
         <div class="mt-6 bg-gray-900/50 p-6 rounded-xl border border-gray-700"><h3 class="text-xl font-bold mb-4">Sugestões de Títulos Otimizados</h3><ul class="space-y-3 titles-list">${titlesHTML}</ul></div>
         <div class="mt-6 bg-gray-900/50 p-6 rounded-xl border border-gray-700"><h3 class="text-xl font-bold mb-4">Paleta de Cores Sugerida</h3><div id="color-palette-container" class="flex justify-center gap-4">${paletteHTML}</div></div>
         <div id="generated-image-section" class="hidden mt-6 bg-gray-900/50 p-6 rounded-xl border border-gray-700 text-center"><h3 class="text-xl font-bold mb-4">Nova Thumbnail Gerada com IA</h3><div id="generated-image-container" class="flex justify-center items-center min-h-[200px]"></div></div>
@@ -273,83 +265,92 @@ function createSingleResultHTML(data) {
     `;
 }
 
-    function createComparisonResultHTML(data) {
-        const winnerColor = 'border-green-500 shadow-green-500/30';
-        const loserColor = 'border-gray-700';
+function createComparisonResultHTML(data) {
+    const winnerColor = 'border-green-500 shadow-green-500/30';
+    const loserColor = 'border-gray-700';
 
-        const renderDetails = (details) => details.map(d => `
-            <div class="flex justify-between items-center text-sm">
-                <span>${d.name}</span>
-                <span class="font-bold">${d.score}</span>
-            </div>`).join('');
+    const renderDetails = (details) => details.map(d => `
+        <div class="flex justify-between items-center text-sm">
+            <span>${d.name}</span>
+            <span class="font-bold">${d.score}</span>
+        </div>`).join('');
 
-        return `
-            <div class="space-y-6">
-                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                    <div class="bg-gray-900/50 p-4 rounded-xl border-2 ${data.comparison_result.winner === 'Versão A' ? winnerColor : loserColor}">
-                        <h3 class="font-bold text-lg text-center mb-2">Versão A</h3>
-                        <img src="${imageA_Data}" class="rounded-lg mb-4">
-                        <div class="space-y-2">${renderDetails(data.version_a.details)}</div>
-                    </div>
-                    <div class="bg-gray-900/50 p-4 rounded-xl border-2 ${data.comparison_result.winner === 'Versão B' ? loserColor : winnerColor}">
-                        <h3 class="font-bold text-lg text-center mb-2">Versão B</h3>
-                        <img src="${imageB_Data}" class="rounded-lg mb-4">
-                        <div class="space-y-2">${renderDetails(data.version_b.details)}</div>
-                    </div>
+    return `
+        <div class="space-y-6">
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <div class="bg-gray-900/50 p-4 rounded-xl border-2 ${data.comparison_result.winner === 'Versão A' ? winnerColor : loserColor}">
+                    <h3 class="font-bold text-lg text-center mb-2">Versão A</h3>
+                    <img src="${imageA_Data}" class="rounded-lg mb-4">
+                    <div class="space-y-2">${renderDetails(data.version_a.details)}</div>
                 </div>
-                <div class="bg-indigo-900/40 p-6 rounded-xl border border-indigo-700 text-center">
-                    <h2 class="text-2xl font-bold mb-2">Vencedora: <span class="gradient-text">${data.comparison_result.winner}</span></h2>
-                    <p class="text-gray-300">${data.comparison_result.justification}</p>
+                <div class="bg-gray-900/50 p-4 rounded-xl border-2 ${data.comparison_result.winner === 'Versão B' ? loserColor : winnerColor}">
+                    <h3 class="font-bold text-lg text-center mb-2">Versão B</h3>
+                    <img src="${imageB_Data}" class="rounded-lg mb-4">
+                    <div class="space-y-2">${renderDetails(data.version_b.details)}</div>
                 </div>
-                <div class="mt-8 flex justify-center"><button id="restart-button-results" class="bg-gray-600 text-white font-bold py-3 px-10 rounded-lg hover:bg-gray-500">Analisar Outras</button></div>
             </div>
-        `;
-    }
+            <div class="bg-indigo-900/40 p-6 rounded-xl border border-indigo-700 text-center">
+                <h2 class="text-2xl font-bold mb-2">Vencedora: <span class="gradient-text">${data.comparison_result.winner}</span></h2>
+                <p class="text-gray-300">${data.comparison_result.justification}</p>
+            </div>
+            <div class="mt-8 flex justify-center"><button id="restart-button-results" class="bg-gray-600 text-white font-bold py-3 px-10 rounded-lg hover:bg-gray-500">Analisar Outras</button></div>
+        </div>
+    `;
+}
 
-    async function generateImage(prompt) {
-        const genSection = document.getElementById('generated-image-section');
-        const genContainer = document.getElementById('generated-image-container');
-        
-        if (!genSection || !genContainer) {
-            console.error("Elementos para geração de imagem não encontrados!");
-            return;
+async function generateImage(prompt) {
+    const genSection = document.getElementById('generated-image-section');
+    const genContainer = document.getElementById('generated-image-container');
+    
+    if (!genSection || !genContainer) {
+        console.error("Elementos para geração de imagem não encontrados!");
+        return;
+    }
+    
+    genSection.classList.remove('hidden');
+    genContainer.innerHTML = `<div role="status">
+                                <svg class="inline w-8 h-8 text-gray-600 animate-spin fill-blue-500" viewBox="0 0 100 101" ...></svg>
+                                <span class="ml-2">Gerando imagem...</span>
+                             </div>`;
+
+    try {
+        const response = await fetch('https://analisathumb.onrender.com/api/generate-image', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ prompt: prompt })
+        });
+
+        if (!response.ok) {
+            const errorResult = await response.json();
+            throw new Error(errorResult.error || `Erro do servidor (${response.status})`);
         }
-        
-        genSection.classList.remove('hidden');
-        genContainer.innerHTML = `<div role="status">
-                                    <svg class="inline w-8 h-8 text-gray-600 animate-spin fill-blue-500" viewBox="0 0 100 101" ...></svg>
-                                    <span class="ml-2">Gerando imagem com DALL-E 3...</span>
-                                 </div>`;
 
-        try {
-            const response = await fetch('https://analisathumb.onrender.com/api/generate-image', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ prompt: prompt })
-            });
+        const result = await response.json();
+        const imageUrl = result.generated_image_url;
+        genContainer.innerHTML = `<img src="${imageUrl}" class="rounded-lg shadow-lg max-w-md w-full" alt="Imagem gerada por IA">`;
 
-            if (!response.ok) {
-                const errorResult = await response.json();
-                throw new Error(errorResult.error || `Erro do servidor (${response.status})`);
-            }
-
-            const result = await response.json();
-            const imageUrl = result.generated_image_url;
-            genContainer.innerHTML = `<img src="${imageUrl}" class="rounded-lg shadow-lg max-w-md w-full" alt="Imagem gerada por IA">`;
-
-        } catch (error) {
-            genContainer.innerHTML = `<p class="text-red-400">Falha ao gerar a imagem: ${error.message}</p>`;
-        }
+    } catch (error) {
+        genContainer.innerHTML = `<p class="text-red-400">Falha ao gerar a imagem: ${error.message}</p>`;
     }
+}
 
-    function resetApp() {
-        DOMElements.resultsSection.classList.add('hidden');
-        
-        const genSection = document.getElementById('generated-image-section');
-        if(genSection) genSection.classList.add('hidden');
+function resetApp() {
+    DOMElements.resultsSection.classList.add('hidden');
+    
+    const genSection = document.getElementById('generated-image-section');
+    if(genSection) genSection.classList.add('hidden');
+    
+    const trendSection = document.getElementById('trend-analysis-section');
+    if(trendSection) trendSection.classList.add('hidden');
 
-        DOMElements.inputSection.classList.remove('hidden');
-        resetInputs();
-    }
+    const titlesSection = document.getElementById('suggested-titles-section');
+    if(titlesSection) titlesSection.classList.add('hidden');
 
-    document.addEventListener('DOMContentLoaded', setupEventListeners);
+    const paletteSection = document.getElementById('color-palette-section');
+    if(paletteSection) paletteSection.classList.add('hidden');
+
+    DOMElements.inputSection.classList.remove('hidden');
+    resetInputs();
+}
+
+document.addEventListener('DOMContentLoaded', setupEventListeners);
