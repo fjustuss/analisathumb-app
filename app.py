@@ -14,12 +14,8 @@ CORS(app)
 
 @app.route('/api/analyze', methods=['POST'])
 def analyze_endpoint():
-    """Endpoint principal que recebe a requisição POST e chama a API do Google Gemini."""
-
     app.logger.info(">>> Rota /api/analyze acessada <<<")
-
     try:
-        # A chave de API do Gemini é lida da variável de ambiente.
         api_key = os.environ.get("GEMINI_API_KEY")
         if not api_key:
             app.logger.error("Chave de API (GEMINI_API_KEY) não encontrada no servidor.")
@@ -29,40 +25,51 @@ def analyze_endpoint():
         if not data:
             return jsonify({"error": "Requisição JSON vazia ou mal formatada."}), 400
 
-        image_data_url = data.get('image_data_url')
+        # CORREÇÃO: Usar a chave correta enviada pelo frontend
+        image_a_data_url = data.get('image_a_data_url')
+        if not image_a_data_url:
+            app.logger.error("Requisição recebida sem a imagem principal (image_a_data_url).")
+            return jsonify({"error": "A imagem principal não foi enviada. Por favor, tente novamente."}), 400
+
         title = data.get('title')
         niche = data.get('niche')
         language = data.get('language', 'português')
-
-        prompt = create_analysis_prompt(title, niche, language)
-
-        app.logger.info(f"Iniciando análise com Gemini para o nicho '{niche}' em {language}.")
-
-        base64_image = image_data_url.split(',')[1]
-        endpoint = f'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key={api_key}'
         
-        payload = {
-            "contents": [{"parts": [{"text": prompt}, {"inline_data": {"mime_type": "image/jpeg", "data": base64_image}}]}]
-        }
+        is_comparison = 'image_b_data_url' in data and data.get('image_b_data_url') is not None
+
+        if is_comparison:
+            image_b_data_url = data.get('image_b_data_url')
+            if not image_b_data_url:
+                 return jsonify({"error": "Modo de comparação ativado, mas a imagem da Versão B não foi enviada."}), 400
+            
+            app.logger.info(f"Iniciando ANÁLISE COMPARATIVA com Gemini para o nicho '{niche}'.")
+            prompt = create_comparison_prompt(title, niche, language)
+            image_a_b64 = image_a_data_url.split(',')[1]
+            image_b_b64 = image_b_data_url.split(',')[1]
+            parts = [
+                {"text": prompt},
+                {"inline_data": {"mime_type": "image/jpeg", "data": image_a_b64}},
+                {"inline_data": {"mime_type": "image/jpeg", "data": image_b_b64}}
+            ]
+        else:
+            app.logger.info(f"Iniciando ANÁLISE SIMPLES com Gemini para o nicho '{niche}'.")
+            prompt = create_single_analysis_prompt(title, niche, language)
+            image_a_b64 = image_a_data_url.split(',')[1]
+            parts = [
+                {"text": prompt},
+                {"inline_data": {"mime_type": "image/jpeg", "data": image_a_b64}}
+            ]
+
+        endpoint = f'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key={api_key}'
+        payload = {"contents": [{"parts": parts}]}
         
         response = requests.post(endpoint, json=payload)
-        app.logger.info(f"Resposta do Gemini (status {response.status_code})")
         response.raise_for_status()
 
         result_json = response.json()
+        result_text = result_json['candidates'][0]['content']['parts'][0]['text']
+        final_json = json.loads(result_text.replace("```json", "").replace("```", "").strip())
         
-        if 'candidates' not in result_json or not result_json['candidates']:
-             app.logger.error(f"Resposta da API Gemini inválida, sem 'candidates': {result_json}")
-             raise ValueError("Resposta da API Gemini inválida: sem 'candidates'.")
-        
-        result = result_json['candidates'][0]['content']['parts'][0]['text']
-        cleaned_result = result.replace("```json", "").replace("```", "").strip()
-        final_json = json.loads(cleaned_result)
-
-        if 'details' not in final_json or 'recommendations' not in final_json:
-            app.logger.error(f"O JSON retornado pela IA não tem a estrutura esperada. Recebido: {final_json}")
-            return jsonify({"error": "A resposta da IA não continha os dados esperados."}), 500
-
         return jsonify(final_json)
 
     except requests.exceptions.HTTPError as e:
@@ -71,50 +78,25 @@ def analyze_endpoint():
         return jsonify({"error": f"Erro na API Gemini: {e.response.status_code}. Detalhes: {error_text}"}), e.response.status_code
     except Exception as e:
         app.logger.error(f"Erro inesperado no servidor: {e}")
-        return jsonify({"error": f"Ocorreu um erro interno no servidor."}), 500
+        return jsonify({"error": "Ocorreu um erro interno no servidor."}), 500
 
 @app.route('/')
 def health_check():
-    """Rota de verificação de saúde para produção."""
     return "Backend do AnalisaThumb (Gemini Edition) está no ar!"
 
-def create_analysis_prompt(title, niche, language):
-    """
-    Cria um prompt muito mais detalhado e instrutivo para a IA, garantindo
-    recomendações específicas sobre fontes, cores, layout e prompts de imagem.
-    """
+def create_single_analysis_prompt(title, niche, language):
     return f"""
-      Você é o AnalisaThumb, um especialista de classe mundial em otimização de thumbnails do YouTube com foco em maximizar a Taxa de Cliques (CTR). Sua análise deve ser rigorosa, objetiva e baseada em princípios de design e marketing.
+      Você é o AnalisaThumb, um especialista de classe mundial em otimização de thumbnails do YouTube.
+      **Contexto:** Título: "{title or 'Não fornecido'}", Nicho: "{niche}", Idioma: {language}.
+      **Tarefa:** Analise a thumbnail e retorne um JSON com a chave "analysis_type" como "single", e os campos "details", "recommendations", "suggested_titles", "trend_analysis", e "color_palette".
+      Para as recomendações, seja específico: sugira fontes (ex: 'Impact'), cores (ex: 'texto amarelo com contorno preto'), e layout (ex: 'rosto na direita, texto na esquerda'). Se a composição for fraca, inclua uma recomendação que comece com "Sugestão de Prompt:".
+    """
 
-      **Contexto do Vídeo:**
-      - **Título:** "{title or 'Não fornecido'}"
-      - **Nicho:** "{niche}"
-      - **Idioma para a Resposta:** {language}
-
-      **Sua Tarefa:**
-      Analise a imagem da thumbnail e retorne **APENAS** um objeto JSON com a seguinte estrutura:
-
-      ```json
-      {{
-        "details": [
-          {{"name": "Legibilidade do Texto", "score": 0-100}},
-          {{"name": "Impacto Emocional", "score": 0-100}},
-          {{"name": "Foco e Composição", "score": 0-100}},
-          {{"name": "Uso de Cores", "score": 0-100}},
-          {{"name": "Relevância (Contexto)", "score": 0-100}}
-        ],
-        "recommendations": [
-          "Recomendação 1",
-          "Recomendação 2"
-        ]
-      }}
-      ```
-
-      **Instruções Detalhadas para as Recomendações:**
-      - Suas recomendações devem ser uma lista de ações práticas e específicas.
-      - Para **Legibilidade**, se a pontuação for baixa, sugira uma fonte específica de alto impacto (Ex: 'Impact', 'Anton', 'The Bold Font') e uma combinação de cores (Ex: 'Use texto amarelo com contorno preto para máximo contraste.').
-      - Para **Composição**, se a pontuação for baixa, sugira uma mudança de layout clara (Ex: 'Posicione o rosto em close-up na direita e o texto na esquerda para guiar o olhar.').
-      - **Regra OBRIGATÓRIA para Prompt de Imagem:** Se a pontuação de "Foco e Composição" for **menor que 75**, você **DEVE** incluir na lista de recomendações uma sugestão de prompt para IA, começando com `"Sugestão de Prompt:"`. O prompt deve ser criativo, em inglês, e baseado no título e nicho para gerar uma imagem superior (Ex: `"Sugestão de Prompt: cinematic photo of a glowing brain made of neon circuits, dark background, cyberpunk style, hyperrealistic --ar 16:9"`).
+def create_comparison_prompt(title, niche, language):
+    return f"""
+      Você é o AnalisaThumb, um especialista em otimização de thumbnails.
+      **Contexto:** Título: "{title or 'Não fornecido'}", Nicho: "{niche}", Idioma: {language}.
+      **Tarefa:** Analise a Imagem A (primeira) e a Imagem B (segunda). Retorne um JSON com "analysis_type" como "comparison". O JSON deve conter "version_a" e "version_b", cada um com um array "details" de 5 critérios pontuados de 0-100. Inclua também um objeto "comparison_result" com uma chave "winner" ("Versão A" ou "Versão B") e uma "justification" explicando a escolha.
     """
 
 if __name__ == '__main__':
