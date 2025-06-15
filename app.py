@@ -25,7 +25,6 @@ def analyze_endpoint():
         if not data:
             return jsonify({"error": "Requisição JSON vazia ou mal formatada."}), 400
 
-        # CORREÇÃO: Usar a chave correta enviada pelo frontend
         image_a_data_url = data.get('image_a_data_url')
         if not image_a_data_url:
             app.logger.error("Requisição recebida sem a imagem principal (image_a_data_url).")
@@ -67,9 +66,25 @@ def analyze_endpoint():
         response.raise_for_status()
 
         result_json = response.json()
+        
+        if 'candidates' not in result_json or not result_json['candidates']:
+             raise ValueError("Resposta da API Gemini inválida: sem 'candidates'.")
+        
         result_text = result_json['candidates'][0]['content']['parts'][0]['text']
         final_json = json.loads(result_text.replace("```json", "").replace("```", "").strip())
         
+        # --- NOVA VALIDAÇÃO DA RESPOSTA ---
+        # Verifica se a estrutura do JSON recebido da IA está correta antes de enviar ao frontend.
+        if is_comparison:
+            if not all(k in final_json for k in ["analysis_type", "version_a", "version_b", "comparison_result"]):
+                raise ValueError("A resposta JSON da IA para comparação está mal formatada.")
+        else: # Análise simples
+            if not all(k in final_json for k in ["analysis_type", "details", "recommendations"]):
+                raise ValueError("A resposta JSON da IA para análise simples está mal formatada.")
+            if not isinstance(final_json.get('details'), list):
+                 raise TypeError("O campo 'details' na resposta da IA não é uma lista.")
+        # --- FIM DA VALIDAÇÃO ---
+
         return jsonify(final_json)
 
     except requests.exceptions.HTTPError as e:
@@ -78,13 +93,14 @@ def analyze_endpoint():
         return jsonify({"error": f"Erro na API Gemini: {e.response.status_code}. Detalhes: {error_text}"}), e.response.status_code
     except Exception as e:
         app.logger.error(f"Erro inesperado no servidor: {e}")
-        return jsonify({"error": "Ocorreu um erro interno no servidor."}), 500
+        return jsonify({"error": f"Ocorreu um erro interno no servidor: {e}"}), 500
 
 @app.route('/')
 def health_check():
     return "Backend do AnalisaThumb (Gemini Edition) está no ar!"
 
 def create_single_analysis_prompt(title, niche, language):
+    # O prompt permanece o mesmo
     return f"""
       Você é o AnalisaThumb, um especialista de classe mundial em otimização de thumbnails do YouTube.
       **Contexto:** Título: "{title or 'Não fornecido'}", Nicho: "{niche}", Idioma: {language}.
@@ -93,6 +109,7 @@ def create_single_analysis_prompt(title, niche, language):
     """
 
 def create_comparison_prompt(title, niche, language):
+    # O prompt permanece o mesmo
     return f"""
       Você é o AnalisaThumb, um especialista em otimização de thumbnails.
       **Contexto:** Título: "{title or 'Não fornecido'}", Nicho: "{niche}", Idioma: {language}.
