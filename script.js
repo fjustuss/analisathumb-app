@@ -1,5 +1,5 @@
 // ===================================================================================
-// ANALISATHUMB - JAVASCRIPT PRINCIPAL
+// ANALISATHUMB - JAVASCRIPT PRINCIPAL (VERSÃO CORRIGIDA)
 // ===================================================================================
 
 // --- 1. SELETORES DE ELEMENTOS DO DOM ---
@@ -7,11 +7,13 @@ const DOMElements = {
     // Seção de Inputs
     inputSection: document.getElementById('input-section'),
     abToggle: document.getElementById('ab-test-toggle'),
-    singleAnalysisContainer: document.getElementById('single-analysis-container'),
-    comparisonContainer: document.getElementById('comparison-container'),
-    uploadSingle: document.getElementById('image-upload-single'),
+    
+    // Os uploaders agora são apenas A e B
+    uploadA_label: document.querySelector('label[for="image-upload-a"]'),
+    uploadB_label: document.querySelector('label[for="image-upload-b"]'),
     uploadA: document.getElementById('image-upload-a'),
     uploadB: document.getElementById('image-upload-b'),
+    
     contextInputsContainer: document.getElementById('context-inputs-container'),
     previewArea: document.getElementById('preview-area'),
     previewA: document.getElementById('image-preview-a'),
@@ -40,7 +42,6 @@ document.addEventListener('DOMContentLoaded', setupEventListeners);
 // --- 4. CONFIGURAÇÃO DOS EVENT LISTENERS ---
 function setupEventListeners() {
     DOMElements.abToggle.addEventListener('change', toggleComparisonMode);
-    DOMElements.uploadSingle.addEventListener('change', (e) => handleImageUpload(e, 'A'));
     DOMElements.uploadA.addEventListener('change', (e) => handleImageUpload(e, 'A'));
     DOMElements.uploadB.addEventListener('change', (e) => handleImageUpload(e, 'B'));
     DOMElements.analyzeButton.addEventListener('click', startAnalysis);
@@ -49,23 +50,27 @@ function setupEventListeners() {
     });
 }
 
-// --- 5. LÓGICA DE CONTROLE DA INTERFACE ---
+// --- 5. LÓGICA DE CONTROLE DA INTERFACE (REATORADA) ---
 
 function toggleComparisonMode() {
     isComparisonMode = DOMElements.abToggle.checked;
-    DOMElements.singleAnalysisContainer.classList.toggle('hidden', isComparisonMode);
-    DOMElements.comparisonContainer.classList.toggle('hidden', !isComparisonMode);
+
+    // Apenas mostra ou esconde a parte da "Versão B"
+    if (DOMElements.uploadB_label) {
+        DOMElements.uploadB_label.parentElement.classList.toggle('hidden', !isComparisonMode);
+    }
     DOMElements.previewB.classList.toggle('hidden', !isComparisonMode);
     
-    // Ajusta o grid de preview para 1 ou 2 colunas
+    // Ajusta o grid de preview
     DOMElements.previewArea.classList.toggle('md:grid-cols-2', isComparisonMode);
     DOMElements.previewArea.classList.toggle('md:grid-cols-1', !isComparisonMode);
-    if (!isComparisonMode) {
-        DOMElements.previewArea.classList.remove('md:grid-cols-2');
-        DOMElements.previewArea.classList.add('md:grid-cols-1');
+
+    // Renomeia a label da Versão A se estiver no modo simples
+    if (DOMElements.uploadA_label) {
+        const labelText = DOMElements.uploadA_label.parentElement.querySelector('p');
+        if(labelText) labelText.textContent = isComparisonMode ? 'Versão A' : 'Thumbnail Principal';
     }
-
-
+    
     resetInputs();
 }
 
@@ -83,6 +88,7 @@ function handleImageUpload(event, version) {
         if (version === 'A') {
             imageA_Data = e.target.result;
             DOMElements.previewA.src = imageA_Data;
+            DOMElements.previewA.classList.remove('hidden'); // Garante que a preview A seja visível
         } else {
             imageB_Data = e.target.result;
             DOMElements.previewB.src = imageB_Data;
@@ -104,11 +110,12 @@ function checkAnalysisButtonState() {
 function resetInputs() {
     imageA_Data = null;
     imageB_Data = null;
-    DOMElements.uploadSingle.value = '';
     DOMElements.uploadA.value = '';
     DOMElements.uploadB.value = '';
     DOMElements.previewA.src = '';
     DOMElements.previewB.src = '';
+    DOMElements.previewA.classList.add('hidden'); // Esconde as previews ao resetar
+    DOMElements.previewB.classList.add('hidden');
     DOMElements.contextInputsContainer.classList.add('hidden');
     DOMElements.analyzeButton.disabled = true;
 }
@@ -160,10 +167,8 @@ function displayResults(results) {
         resultsContainer.innerHTML = createComparisonResultHTML(results);
     }
     
-    // O botão de restart agora é parte do HTML gerado, então o event listener é adicionado aqui
     document.getElementById('restart-button-results').addEventListener('click', resetApp);
     
-    // Anima as barras de progresso após estarem no DOM
     setTimeout(() => {
         document.querySelectorAll('.progress-bar-fill').forEach(bar => {
             bar.style.width = bar.dataset.width;
@@ -263,6 +268,7 @@ function createSingleResultHTML(data) {
         <div class="mt-6 bg-gray-900/50 p-6 rounded-xl border border-gray-700"><h3 class="text-xl font-bold mb-4">Análise de Tendências do Nicho</h3><p class="text-gray-300">${data.trend_analysis}</p></div>
         <div class="mt-6 bg-gray-900/50 p-6 rounded-xl border border-gray-700"><h3 class="text-xl font-bold mb-4">Sugestões de Títulos Otimizados</h3><ul class="space-y-3 titles-list">${titlesHTML}</ul></div>
         <div class="mt-6 bg-gray-900/50 p-6 rounded-xl border border-gray-700"><h3 class="text-xl font-bold mb-4">Paleta de Cores Sugerida</h3><div id="color-palette-container" class="flex justify-center gap-4">${paletteHTML}</div></div>
+        <div id="generated-image-section" class="hidden mt-6 bg-gray-900/50 p-6 rounded-xl border border-gray-700 text-center"><h3 class="text-xl font-bold mb-4">Nova Thumbnail Gerada com IA</h3><div id="generated-image-container" class="flex justify-center items-center min-h-[200px]"></div></div>
         <div class="mt-8 flex justify-center"><button id="restart-button-results" class="bg-gray-600 text-white font-bold py-3 px-10 rounded-lg hover:bg-gray-500">Analisar Outra</button></div>
     `;
 }
@@ -337,8 +343,7 @@ function createSingleResultHTML(data) {
     }
 
     function resetApp() {
-        const resultsSection = DOMElements.resultsSection;
-        if(resultsSection) resultsSection.classList.add('hidden');
+        DOMElements.resultsSection.classList.add('hidden');
         
         const genSection = document.getElementById('generated-image-section');
         if(genSection) genSection.classList.add('hidden');
