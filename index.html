@@ -108,9 +108,11 @@
                  </div>
                  <div id="suggested-titles-section" class="hidden mt-6 bg-gray-900/50 p-6 rounded-xl border border-gray-700">
                     <h3 class="text-xl font-bold mb-4">Sugestões de Títulos Otimizados</h3>
-                    <ul id="titles-list" class="space-y-3 titles-list">
-                        <!-- Títulos serão injetados aqui -->
-                    </ul>
+                    <ul id="titles-list" class="space-y-3 titles-list"></ul>
+                 </div>
+                 <div id="color-palette-section" class="hidden mt-6 bg-gray-900/50 p-6 rounded-xl border border-gray-700">
+                    <h3 class="text-xl font-bold mb-4">Paleta de Cores Sugerida</h3>
+                    <div id="color-palette-container" class="flex justify-center gap-4"></div>
                  </div>
                  <div class="mt-8 flex justify-center"><button id="restart-button" class="bg-gray-600 text-white font-bold py-3 px-10 rounded-lg hover:bg-gray-500">Analisar Outra</button></div>
             </div>
@@ -126,6 +128,8 @@ const allDOMElements = {
     titlesList: document.getElementById('titles-list'),
     trendAnalysisSection: document.getElementById('trend-analysis-section'),
     trendAnalysisText: document.getElementById('trend-analysis-text'),
+    colorPaletteSection: document.getElementById('color-palette-section'),
+    colorPaletteContainer: document.getElementById('color-palette-container'),
     tabUpload: document.getElementById('tab-upload'),
     tabUrl: document.getElementById('tab-url'),
     formUpload: document.getElementById('form-upload'),
@@ -341,6 +345,22 @@ function displayResults(results) {
     } else {
         el.trendAnalysisSection.classList.add('hidden');
     }
+
+    el.colorPaletteContainer.innerHTML = '';
+    if (results.color_palette && results.color_palette.length > 0) {
+        results.color_palette.forEach(color => {
+            const colorItem = `
+                <div class="text-center">
+                    <div class="w-16 h-16 rounded-lg border-2 border-gray-600 shadow-md" style="background-color: ${color};"></div>
+                    <p class="text-sm font-mono mt-2">${color}</p>
+                </div>
+            `;
+            el.colorPaletteContainer.innerHTML += colorItem;
+        });
+        el.colorPaletteSection.classList.remove('hidden');
+    } else {
+        el.colorPaletteSection.classList.add('hidden');
+    }
 }
 
 function resetApp() {
@@ -348,6 +368,7 @@ function resetApp() {
     el.resultsSection.classList.add('hidden');
     el.suggestedTitlesSection.classList.add('hidden');
     el.trendAnalysisSection.classList.add('hidden');
+    el.colorPaletteSection.classList.add('hidden');
     el.inputSection.classList.remove('hidden');
     resetInputs();
 }

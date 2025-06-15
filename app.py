@@ -59,7 +59,7 @@ def analyze_endpoint():
         final_json = json.loads(cleaned_result)
 
         # Verificação da nova estrutura
-        if 'details' not in final_json or 'recommendations' not in final_json or 'suggested_titles' not in final_json or 'trend_analysis' not in final_json:
+        if 'details' not in final_json or 'recommendations' not in final_json or 'suggested_titles' not in final_json or 'trend_analysis' not in final_json or 'color_palette' not in final_json:
             app.logger.error(f"O JSON retornado pela IA não tem a estrutura esperada. Recebido: {final_json}")
             return jsonify({"error": "A resposta da IA não continha os dados esperados."}), 500
 
@@ -80,7 +80,7 @@ def health_check():
 
 def create_analysis_prompt(title, niche, language):
     """
-    Cria um prompt detalhado que agora também solicita análise de tendências do nicho.
+    Cria um prompt detalhado que agora também solicita uma paleta de cores.
     """
     return f"""
       Você é o AnalisaThumb, um especialista de classe mundial em otimização de thumbnails e títulos de vídeos do YouTube para maximizar a Taxa de Cliques (CTR).
@@ -90,16 +90,12 @@ def create_analysis_prompt(title, niche, language):
       - **Nicho:** "{niche}"
       - **Idioma para a Resposta:** {language}
 
-      **Sua Tarefa (Dividida em Três Partes):**
+      **Sua Tarefa (Dividida em Quatro Partes):**
       
-      **Parte 1: Análise da Thumbnail**
-      Analise a imagem da thumbnail e retorne uma pontuação de 0 a 100 para cada um dos 5 critérios abaixo, junto com recomendações práticas.
-
-      **Parte 2: Sugestões de Títulos**
-      Com base no contexto, gere uma lista de 3 a 5 sugestões de títulos alternativos no idioma "{language}".
-
-      **Parte 3: Análise de Tendências do Nicho**
-      Com base no nicho "{niche}", comente em um parágrafo curto se o estilo da thumbnail (cores, fontes, layout, tipo de imagem) está alinhado com as tendências atuais de vídeos de alta performance nesse segmento.
+      1.  **Análise da Thumbnail:** Retorne uma pontuação de 0 a 100 para cada um dos 5 critérios abaixo, junto com recomendações práticas.
+      2.  **Sugestões de Títulos:** Gere de 3 a 5 sugestões de títulos otimizados no idioma "{language}".
+      3.  **Análise de Tendências:** Com base no nicho, comente em um parágrafo se o estilo da thumbnail está alinhado com as tendências atuais.
+      4.  **Gerador de Paleta de Cores:** Sugira uma paleta de 4 cores (em códigos hexadecimais) que seja harmoniosa e de alto contraste, ideal para ser usada nesta thumbnail ou em designs futuros para este nicho.
 
       **Formato de Saída Obrigatório:**
       Retorne **APENAS** um objeto JSON com a seguinte estrutura:
@@ -119,16 +115,23 @@ def create_analysis_prompt(title, niche, language):
           "Sugestão de Prompt: (se aplicável)"
         ],
         "suggested_titles": [
-          "Primeira sugestão de título no idioma {language}",
-          "Segunda sugestão de título no idioma {language}"
+          "Primeira sugestão de título...",
+          "Segunda sugestão de título..."
         ],
-        "trend_analysis": "Seu uso de cores vibrantes está alinhado com a tendência do nicho de games, porém, a fonte do texto poderia ser mais impactante, como as usadas por canais de alta performance no segmento."
+        "trend_analysis": "Um parágrafo com a análise de tendência aqui.",
+        "color_palette": [
+          "#C0392B",
+          "#F1C40F",
+          "#2980B9",
+          "#ECF0F1"
+        ]
       }}
       ```
 
       **Instruções para Análise:**
       - Seja rigoroso e objetivo nas pontuações.
       - As recomendações devem ser práticas e acionáveis.
+      - A paleta de cores deve conter 4 códigos hexadecimais válidos.
       - **Regra do Prompt:** Se a pontuação de "Foco e Composição" for menor que 70, **DEVE** incluir uma recomendação começando com `"Sugestão de Prompt:"`.
     """
 
