@@ -65,6 +65,7 @@
                                 <option value="Türkçe">Türkçe (Turco)</option>
                                 <option value="Polski">Polski (Polonês)</option>
                                 <option value="Nederlands">Nederlands (Holandês)</option>
+                                <option value="norsk">Norsk (Norueguês)</option>
                             </select>
                         </div>
                         <div class="text-left">
@@ -75,6 +76,7 @@
                                 <option>Finanças</option>
                                 <option>Vlogs / Lifestyle</option>
                                 <option>Educação</option>
+                                <option>Espiritual</option>
                                 <option value="Outro">Outro</option>
                             </select>
                         </div>
@@ -243,14 +245,8 @@ async function startAnalysis() {
     const title = el.videoTitleInput.value;
     const language = el.languageSelect.value;
     
-    // =========================================================================
-    // !! AÇÃO NECESSÁRIA !!
-    // Substitua o texto 'URL_COMPLETA_DO_SEU_BACKEND_AQUI' pela URL completa 
-    // do seu backend (Web Service) no Render.
-    // Exemplo: const backendUrl = 'https://analisathumb.onrender.com/api/analyze';
-    // =========================================================================
     const backendUrl = 'https://analisathumb.onrender.com/api/analyze'; 
-    
+
     try {
         const response = await fetch(backendUrl, {
             method: 'POST',
