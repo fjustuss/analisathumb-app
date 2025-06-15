@@ -243,8 +243,13 @@ async function startAnalysis() {
     const title = el.videoTitleInput.value;
     const language = el.languageSelect.value;
     
+    // =========================================================================
+    // !! AÇÃO NECESSÁRIA !!
+    // Substitua a URL abaixo pela URL COMPLETA do seu backend (Web Service) no Render.
+    // Exemplo: const backendUrl = 'https://analisathumb.onrender.com/api/analyze';
+    // =========================================================================
     const backendUrl = '/api/analyze'; 
-
+    
     try {
         const response = await fetch(backendUrl, {
             method: 'POST',
