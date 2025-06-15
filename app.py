@@ -19,7 +19,6 @@ def analyze_endpoint():
     app.logger.info(">>> Rota /api/analyze acessada <<<")
 
     try:
-        # A chave de API do Gemini é lida da variável de ambiente.
         api_key = os.environ.get("GEMINI_API_KEY")
         if not api_key:
             app.logger.error("Chave de API (GEMINI_API_KEY) não encontrada no servidor.")
@@ -32,9 +31,9 @@ def analyze_endpoint():
         image_data_url = data.get('image_data_url')
         title = data.get('title')
         niche = data.get('niche')
-        language = data.get('language', 'português') # Pega o idioma, com 'português' como padrão
+        language = data.get('language', 'português')
 
-        prompt = create_analysis_prompt(title, niche, language) # Passa o idioma para o prompt
+        prompt = create_analysis_prompt(title, niche, language)
 
         app.logger.info(f"Iniciando análise com Gemini para o nicho '{niche}' em {language}.")
 
@@ -60,7 +59,7 @@ def analyze_endpoint():
         final_json = json.loads(cleaned_result)
 
         # Verificação da nova estrutura
-        if 'details' not in final_json or 'recommendations' not in final_json or 'suggested_titles' not in final_json:
+        if 'details' not in final_json or 'recommendations' not in final_json or 'suggested_titles' not in final_json or 'trend_analysis' not in final_json:
             app.logger.error(f"O JSON retornado pela IA não tem a estrutura esperada. Recebido: {final_json}")
             return jsonify({"error": "A resposta da IA não continha os dados esperados."}), 500
 
@@ -81,7 +80,7 @@ def health_check():
 
 def create_analysis_prompt(title, niche, language):
     """
-    Cria um prompt detalhado que agora também solicita sugestões de títulos otimizados.
+    Cria um prompt detalhado que agora também solicita análise de tendências do nicho.
     """
     return f"""
       Você é o AnalisaThumb, um especialista de classe mundial em otimização de thumbnails e títulos de vídeos do YouTube para maximizar a Taxa de Cliques (CTR).
@@ -91,13 +90,16 @@ def create_analysis_prompt(title, niche, language):
       - **Nicho:** "{niche}"
       - **Idioma para a Resposta:** {language}
 
-      **Sua Tarefa (Dividida em Duas Partes):**
+      **Sua Tarefa (Dividida em Três Partes):**
       
       **Parte 1: Análise da Thumbnail**
       Analise a imagem da thumbnail e retorne uma pontuação de 0 a 100 para cada um dos 5 critérios abaixo, junto com recomendações práticas.
 
       **Parte 2: Sugestões de Títulos**
-      Com base na análise da imagem e no contexto, gere uma lista de 3 a 5 sugestões de títulos alternativos. Os títulos devem ser otimizados para curiosidade e CTR, e devem estar no idioma "{language}".
+      Com base no contexto, gere uma lista de 3 a 5 sugestões de títulos alternativos no idioma "{language}".
+
+      **Parte 3: Análise de Tendências do Nicho**
+      Com base no nicho "{niche}", comente em um parágrafo curto se o estilo da thumbnail (cores, fontes, layout, tipo de imagem) está alinhado com as tendências atuais de vídeos de alta performance nesse segmento.
 
       **Formato de Saída Obrigatório:**
       Retorne **APENAS** um objeto JSON com a seguinte estrutura:
@@ -118,16 +120,16 @@ def create_analysis_prompt(title, niche, language):
         ],
         "suggested_titles": [
           "Primeira sugestão de título no idioma {language}",
-          "Segunda sugestão de título no idioma {language}",
-          "Terceira sugestão de título no idioma {language}"
-        ]
+          "Segunda sugestão de título no idioma {language}"
+        ],
+        "trend_analysis": "Seu uso de cores vibrantes está alinhado com a tendência do nicho de games, porém, a fonte do texto poderia ser mais impactante, como as usadas por canais de alta performance no segmento."
       }}
       ```
 
       **Instruções para Análise:**
       - Seja rigoroso e objetivo nas pontuações.
       - As recomendações devem ser práticas e acionáveis.
-      - **Regra para a Geração de Prompt:** Se a pontuação de "Foco e Composição" for menor que 70, você **DEVE** incluir uma recomendação começando com `"Sugestão de Prompt:"`.
+      - **Regra do Prompt:** Se a pontuação de "Foco e Composição" for menor que 70, **DEVE** incluir uma recomendação começando com `"Sugestão de Prompt:"`.
     """
 
 if __name__ == '__main__':

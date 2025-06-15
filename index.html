@@ -102,7 +102,10 @@
                         <div class="bg-gray-900/50 p-6 rounded-xl border border-gray-700"><h3 class="text-xl font-bold mb-4">Recomendações para Melhorar</h3><ul id="recommendations-list" class="space-y-3 h-48 overflow-y-auto pr-2 recommendations-list"></ul></div>
                     </div>
                  </div>
-                 <!-- Nova Seção de Sugestão de Títulos -->
+                 <div id="trend-analysis-section" class="hidden mt-6 bg-gray-900/50 p-6 rounded-xl border border-gray-700">
+                    <h3 class="text-xl font-bold mb-4">Análise de Tendências do Nicho</h3>
+                    <p id="trend-analysis-text" class="text-gray-300"></p>
+                 </div>
                  <div id="suggested-titles-section" class="hidden mt-6 bg-gray-900/50 p-6 rounded-xl border border-gray-700">
                     <h3 class="text-xl font-bold mb-4">Sugestões de Títulos Otimizados</h3>
                     <ul id="titles-list" class="space-y-3 titles-list">
@@ -118,12 +121,11 @@
 
 <script>
 const allDOMElements = {
-    // ... outros elementos ...
     languageSelect: document.getElementById('language-select'),
     suggestedTitlesSection: document.getElementById('suggested-titles-section'),
     titlesList: document.getElementById('titles-list'),
-    
-    // Elementos já existentes
+    trendAnalysisSection: document.getElementById('trend-analysis-section'),
+    trendAnalysisText: document.getElementById('trend-analysis-text'),
     tabUpload: document.getElementById('tab-upload'),
     tabUrl: document.getElementById('tab-url'),
     formUpload: document.getElementById('form-upload'),
@@ -152,6 +154,11 @@ const allDOMElements = {
 let imageDataSource = null;
 
 function setupEventListeners() {
+    for (const key in allDOMElements) {
+        if (!allDOMElements[key]) {
+            console.error(`Elemento não encontrado: ${key}`);
+        }
+    }
     const el = allDOMElements;
     el.tabUpload.addEventListener('click', () => switchTab('upload'));
     el.tabUrl.addEventListener('click', () => switchTab('url'));
@@ -312,7 +319,6 @@ function displayResults(results) {
         el.recommendationsList.innerHTML += `<li class="flex items-start">${icon}${content}</li>`;
     });
 
-    // Populando a lista de títulos sugeridos
     el.titlesList.innerHTML = '';
     if (results.suggested_titles && results.suggested_titles.length > 0) {
         results.suggested_titles.forEach(title => {
@@ -328,12 +334,20 @@ function displayResults(results) {
     } else {
         el.suggestedTitlesSection.classList.add('hidden');
     }
+
+    if (results.trend_analysis) {
+        el.trendAnalysisText.textContent = results.trend_analysis;
+        el.trendAnalysisSection.classList.remove('hidden');
+    } else {
+        el.trendAnalysisSection.classList.add('hidden');
+    }
 }
 
 function resetApp() {
     const el = allDOMElements;
     el.resultsSection.classList.add('hidden');
     el.suggestedTitlesSection.classList.add('hidden');
+    el.trendAnalysisSection.classList.add('hidden');
     el.inputSection.classList.remove('hidden');
     resetInputs();
 }
