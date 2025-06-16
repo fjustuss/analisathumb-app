@@ -101,7 +101,6 @@ def generate_image_endpoint():
             "size": "1792x1024"
         }
         
-        # --- CORREÇÃO FINAL: URL do endpoint da A4F.co corrigida ---
         response = requests.post("https://api.a4f.co/v1/images/generations", headers=headers, json=payload)
         app.logger.info(f"Resposta da API A4F.co (status {response.status_code})")
         response.raise_for_status()
@@ -130,10 +129,10 @@ def health_check():
 
 def create_analysis_prompt(title, niche, language):
     """
-    Cria um prompt muito mais explícito para garantir o formato correto da resposta.
+    Cria um prompt muito mais explícito para garantir o formato correto e a qualidade da resposta.
     """
     return f"""
-      Sua única tarefa é analisar a imagem e o contexto fornecidos e retornar um objeto JSON. Não inclua NENHUMA palavra, explicação ou texto antes ou depois do objeto JSON. A sua resposta deve começar com `{{` e terminar com `}}`.
+      Você é o AnalisaThumb, um especialista de classe mundial em otimização de thumbnails do YouTube. Sua tarefa é analisar a imagem e o contexto fornecidos e retornar um objeto JSON. Não inclua NENHUMA palavra, explicação ou texto antes ou depois do objeto JSON. A sua resposta deve começar com `{{` e terminar com `}}`.
 
       **Contexto:**
       - Título: "{title or 'Não fornecido'}"
@@ -154,11 +153,21 @@ def create_analysis_prompt(title, niche, language):
         "recommendations": [
           "Recomendação 1",
           "Recomendação 2"
-        ]
+        ],
+        "suggested_titles": [
+          "Sugestão de título 1",
+          "Sugestão de título 2"
+        ],
+        "trend_analysis": "Análise de tendência do nicho aqui.",
+        "color_palette": ["#C0392B", "#F1C40F", "#2980B9", "#ECF0F1"]
       }}
       ```
-      **Instruções para Recomendações:**
-      - Se a pontuação de "Foco e Composição" for menor que 75, você DEVE incluir uma recomendação que comece com "Sugestão de Prompt:". O prompt deve ser em inglês.
+      **Instruções Detalhadas para Recomendações:**
+      - As recomendações devem ser uma lista de ações práticas e específicas.
+      - Para **Legibilidade**, se a pontuação for baixa, sugira uma fonte específica de alto impacto (Ex: 'Impact', 'Anton', 'The Bold Font') e uma combinação de cores (Ex: 'Use texto amarelo com contorno preto para máximo contraste.').
+      - Para **Composição**, se a pontuação for baixa, sugira uma mudança de layout clara (Ex: 'Posicione o rosto em close-up na direita e o texto na esquerda para guiar o olhar.').
+      - **Regra OBRIGATÓRIA:** Se a pontuação de "Foco e Composição" for menor que 75, você DEVE incluir uma recomendação que comece com "Sugestão de Prompt:". O prompt deve ser em inglês.
+      - Inclua sempre a análise de tendências e a paleta de cores.
     """
 
 if __name__ == '__main__':
