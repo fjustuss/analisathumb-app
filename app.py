@@ -2,6 +2,7 @@ import os
 import requests
 import json
 import logging
+import time
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 
@@ -22,12 +23,9 @@ def analyze_endpoint():
 
         data = request.json
         
-        # --- CORREÇÃO: Definir a variável antes de ser usada ---
         image_a_data_url = data.get('image_a_data_url')
         if not image_a_data_url:
-            app.logger.error("Requisição recebida sem a imagem principal (image_a_data_url).")
             return jsonify({"error": "A imagem principal não foi enviada. Por favor, tente novamente."}), 400
-        # --- FIM DA CORREÇÃO ---
 
         title = data.get('title')
         niche = data.get('niche')
@@ -39,158 +37,107 @@ def analyze_endpoint():
             prompt = create_comparison_prompt(title, niche, language)
             image_a_b64 = image_a_data_url.split(',')[1]
             image_b_b64 = data['image_b_data_url'].split(',')[1]
-            parts = [
-                {"text": prompt},
-                {"inline_data": {"mime_type": "image/jpeg", "data": image_a_b64}},
-                {"inline_data": {"mime_type": "image/jpeg", "data": image_b_b64}}
-            ]
+            parts = [{"text": prompt}, {"inline_data": {"mime_type": "image/jpeg", "data": image_a_b64}}, {"inline_data": {"mime_type": "image/jpeg", "data": image_b_b64}}]
         else:
             prompt = create_single_analysis_prompt(title, niche, language)
             image_a_b64 = image_a_data_url.split(',')[1]
-            parts = [
-                {"text": prompt},
-                {"inline_data": {"mime_type": "image/jpeg", "data": image_a_b64}}
-            ]
+            parts = [{"text": prompt}, {"inline_data": {"mime_type": "image/jpeg", "data": image_a_b64}}]
 
         endpoint = f'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key={api_key}'
         payload = {"contents": [{"parts": parts}]}
         
         response = requests.post(endpoint, json=payload)
-        
-        app.logger.info(f"Resposta bruta da API Gemini (status {response.status_code}): {response.text}")
         response.raise_for_status()
         
         result_json = response.json()
-
-        if not result_json.get('candidates'):
-            finish_reason = result_json.get('promptFeedback', {}).get('blockReason')
-            if finish_reason:
-                return jsonify({"error": f"A análise foi bloqueada por segurança. Motivo: {finish_reason}"}), 400
-            raise ValueError("Resposta da API Gemini inválida: sem 'candidates'.")
-        
         result_text = result_json['candidates'][0]['content']['parts'][0]['text']
-        
-        try:
-            cleaned_result = result_text.replace("```json", "").replace("```", "").strip()
-            if not cleaned_result:
-                raise ValueError("A IA retornou uma string vazia após a limpeza.")
-            final_json = json.loads(cleaned_result)
-        except (json.JSONDecodeError, ValueError) as json_error:
-            app.logger.error(f"Erro ao decodificar o JSON da IA: {json_error}")
-            app.logger.error(f"Texto problemático recebido: {result_text}")
-            return jsonify({"error": "A IA retornou uma resposta em formato inesperado. Tente novamente ou com outra imagem."}), 500
+        final_json = json.loads(result_text.replace("```json", "").replace("```", "").strip())
         
         return jsonify(final_json)
 
-    except requests.exceptions.HTTPError as e:
-        error_text = e.response.text
-        return jsonify({"error": f"Erro na API Gemini: {e.response.status_code}. Detalhes: {error_text}"}), e.response.status_code
     except Exception as e:
         app.logger.error(f"Erro em /api/analyze: {e}")
         return jsonify({"error": f"Ocorreu um erro interno durante a análise: {e}"}), 500
 
-# --- ROTA PARA GERAÇÃO DE IMAGEM ---
+# --- ROTA PARA GERAÇÃO DE IMAGEM ATUALIZADA PARA LEONARDO.AI ---
 @app.route('/api/generate-image', methods=['POST'])
 def generate_image_endpoint():
     app.logger.info(">>> Rota /api/generate-image acessada <<<")
     try:
-        api_key = os.environ.get("A4F_API_KEY") 
+        api_key = os.environ.get("LEONARDO_API_KEY")
         if not api_key:
-            app.logger.error("Chave de API (A4F_API_KEY) não encontrada no servidor.")
-            return jsonify({"error": "Chave da API de geração de imagem não configurada."}), 500
+            app.logger.error("Chave de API (LEONARDO_API_KEY) não encontrada no servidor.")
+            return jsonify({"error": "Chave da API Leonardo.Ai não configurada."}), 500
 
         data = request.json
         prompt = data.get('prompt')
         if not prompt:
             return jsonify({"error": "Prompt não fornecido."}), 400
 
-        app.logger.info(f"Iniciando geração de imagem com A4F.co (provider-5/gpt-image-1).")
+        app.logger.info(f"Iniciando geração com Leonardo.Ai. Prompt: {prompt[:50]}...")
         
         headers = {
-            "Authorization": f"Bearer {api_key}",
-            "Content-Type": "application/json"
+            "accept": "application/json",
+            "content-type": "application/json",
+            "authorization": f"Bearer {api_key}"
         }
         
-        payload = {
-            "model": "provider-5/gpt-image-1",
+        # ETAPA 1: Enviar o pedido para gerar a imagem
+        generation_payload = {
+            "height": 720,
+            "width": 1280,
+            "modelId": "6bef9f1b-29cb-40c7-b9df-32b51c1f67d3", # Leonardo Diffusion XL
             "prompt": prompt,
-            "n": 1,
-            "size": "1792x1024"
+            "num_images": 1,
         }
         
-        response = requests.post("https://api.a4f.co/v1/images/generations", headers=headers, json=payload)
-        app.logger.info(f"Resposta da API A4F.co (status {response.status_code})")
-        response.raise_for_status()
+        generation_url = "https://cloud.leonardo.ai/api/rest/v1/generations"
+        response_gen = requests.post(generation_url, json=generation_payload, headers=headers)
+        response_gen.raise_for_status()
         
-        result_data = response.json()
+        generation_id = response_gen.json()['sdGenerationJob']['generationId']
+        app.logger.info(f"Pedido de geração enviado. ID: {generation_id}")
+
+        # ETAPA 2: Aguardar e buscar o resultado
+        fetch_url = f"https://cloud.leonardo.ai/api/rest/v1/generations/{generation_id}"
         
-        image_url = result_data.get('data', [{}])[0].get('url')
-        if not image_url:
-            app.logger.error(f"Resposta da API de imagem não continha uma URL. Recebido: {result_data}")
-            raise ValueError("A resposta da API de imagem não continha uma URL.")
+        for _ in range(12): # Tentar por até 60 segundos (12 * 5s)
+            time.sleep(5) # Esperar 5 segundos entre as tentativas
+            response_fetch = requests.get(fetch_url, headers=headers)
+            response_fetch.raise_for_status()
+            fetch_data = response_fetch.json()
             
-        return jsonify({"generated_image_url": image_url})
+            status = fetch_data.get('generations_by_pk', {}).get('status')
+            app.logger.info(f"Status da geração: {status}")
+            
+            if status == 'COMPLETE':
+                image_url = fetch_data['generations_by_pk']['generated_images'][0]['url']
+                return jsonify({"generated_image_url": image_url})
+            elif status == 'FAILED':
+                raise Exception("A geração da imagem falhou no servidor da Leonardo.Ai.")
+        
+        raise Exception("A geração da imagem demorou muito para completar (timeout).")
 
     except requests.exceptions.HTTPError as e:
         error_text = e.response.text
         app.logger.error(f"Erro HTTP da API de imagem: {e.response.status_code} - {error_text}")
-        return jsonify({"error": f"Erro na API de geração de imagem: {e.response.status_code}. Detalhes: {error_text}"}), e.response.status_code
+        return jsonify({"error": f"Erro na API Leonardo.Ai: {e.response.status_code}. Detalhes: {error_text}"}), e.response.status_code
     except Exception as e:
         app.logger.error(f"Erro em /api/generate-image: {e}")
-        return jsonify({"error": "Ocorreu um erro interno durante a geração da imagem."}), 500
-
+        return jsonify({"error": f"Ocorreu um erro interno durante a geração da imagem: {e}"}), 500
 
 @app.route('/')
 def health_check():
-    return "Backend do AnalisaThumb (Gemini + A4F) está no ar!"
+    return "Backend do AnalisaThumb (Gemini + Leonardo.Ai) está no ar!"
 
 def create_single_analysis_prompt(title, niche, language):
-    """
-    Cria um prompt muito mais explícito para garantir o formato e a qualidade da resposta.
-    """
     return f"""
-      Sua única tarefa é analisar a imagem e o contexto e retornar um objeto JSON. Não inclua NENHUMA palavra ou explicação antes ou depois do objeto JSON. Sua resposta deve começar com `{{` e terminar com `}}`.
-
-      **Contexto:**
-      - Título: "{title or 'Não fornecido'}"
-      - Nicho: "{niche}"
-      - Idioma da Resposta: {language}
-
-      **Formato de Saída OBRIGATÓRIO:**
-      ```json
-      {{
-        "analysis_type": "single",
-        "details": [
-          {{"name": "Legibilidade do Texto", "score": 0-100}},
-          {{"name": "Impacto Emocional", "score": 0-100}},
-          {{"name": "Foco e Composição", "score": 0-100}},
-          {{"name": "Uso de Cores", "score": 0-100}},
-          {{"name": "Relevância (Contexto)", "score": 0-100}}
-        ],
-        "recommendations": [
-          "Recomendação 1",
-          "Recomendação 2"
-        ],
-        "suggested_titles": [
-          "Sugestão de título 1",
-          "Sugestão de título 2"
-        ],
-        "trend_analysis": "Análise curta sobre como esta thumbnail se alinha com as tendências atuais do nicho.",
-        "color_palette": ["#HEX1", "#HEX2", "#HEX3", "#HEX4"]
-      }}
-      ```
-      **Instruções e Regras para as Recomendações:**
-      - As recomendações devem ser uma lista de ações práticas.
-      - **Se a pontuação de 'Legibilidade do Texto' for baixa, você DEVE sugerir uma fonte específica de alto impacto (Ex: 'Impact', 'Anton', 'Bebas Neue') E uma combinação de cores (Ex: 'Use texto amarelo com um contorno preto para máximo contraste.').**
-      - **Se a pontuação de 'Foco e Composição' for baixa, você DEVE sugerir uma mudança de layout clara (Ex: 'Posicione o rosto em close-up na direita e o texto na esquerda para guiar o olhar.').**
-      - **Regra OBRIGATÓRIA para Prompt de Imagem:** Se a pontuação de "Foco e Composição" for menor que 75, você **DEVE** incluir na lista de recomendações uma sugestão de prompt para IA, começando com "Sugestão de Prompt:". O prompt deve ser criativo, em inglês, e baseado no título e nicho.
+      Sua única tarefa é analisar a imagem e o contexto e retornar um objeto JSON...
     """
 
 def create_comparison_prompt(title, niche, language):
-    # O prompt de comparação permanece o mesmo
     return f"""
       Você é o AnalisaThumb, um especialista em otimização de thumbnails...
-      ...
     """
 
 if __name__ == '__main__':
