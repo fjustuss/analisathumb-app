@@ -24,8 +24,13 @@ def analyze_endpoint():
             return jsonify({"error": "Chave de API do Gemini não configurada no servidor."}), 500
 
         data = request.json
-        # ... (código de análise do Gemini, sem alterações)
-        image_data_url = data.get('image_data_url')
+        
+        # --- CORREÇÃO: Usar a chave correta 'image_a_data_url' e validar ---
+        image_data_url = data.get('image_a_data_url')
+        if not image_data_url:
+            app.logger.error("Requisição recebida sem a imagem principal (image_a_data_url).")
+            return jsonify({"error": "A imagem principal não foi enviada. Por favor, tente novamente."}), 400
+
         title = data.get('title')
         niche = data.get('niche')
         language = data.get('language', 'português')
