@@ -181,8 +181,15 @@ function copyToClipboard(element, text) {
     document.body.removeChild(textarea);
 
     const originalContent = element.innerHTML;
-    element.innerHTML = '<svg class="w-4 h-4 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>';
-    setTimeout(() => { element.innerHTML = originalContent; }, 1500);
+    const isColorElement = element.tagName === 'P';
+
+    if (isColorElement) {
+        element.textContent = 'Copiado!';
+        setTimeout(() => { element.textContent = text; }, 1500);
+    } else {
+        element.innerHTML = '<svg class="w-4 h-4 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>';
+        setTimeout(() => { element.innerHTML = originalContent; }, 1500);
+    }
 }
 
 function createSingleResultHTML(data) {
@@ -213,10 +220,14 @@ function createSingleResultHTML(data) {
         const isPrompt = rec.startsWith('Sugestão de Prompt:');
         const textToCopy = isPrompt ? rec.substring(18).trim() : rec;
         
+        const generateBtnHTML = isPrompt 
+            ? `<button class="ml-2 p-1 text-blue-400 hover:text-white" title="Gerar Imagem com este Prompt" onclick="generateImage('${textToCopy.replace(/'/g, "\\'")}')"><svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path d="M17.414 2.586a2 2 0 00-2.828 0L7 10.172V13h2.828l7.586-7.586a2 2 0 000-2.828zM5 12V7a2 2 0 012-2h2.586l-2.5 2.5L5 12zM3 16a2 2 0 012-2h10a2 2 0 012 2v2a2 2 0 01-2-2H5a2 2 0 01-2-2v-2z"></path></svg></button>`
+            : '';
+
         const content = isPrompt ? `<div class="prompt-suggestion">${textToCopy}</div>` : `<span>${rec}</span>`;
         const icon = !isPrompt ? '<svg class="w-5 h-5 mr-3 text-indigo-400 flex-shrink-0 mt-0.5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 15-5-5 1.41-1.41L11 14.17l7.59-7.59L20 8l-9 9z"></path></svg>' : '';
         
-        return `<li class="flex items-start">${icon}<div class="flex-grow">${content}</div><button class="ml-2 p-1 text-gray-400 hover:text-white copy-btn flex-shrink-0" onclick="copyToClipboard(this, \`${textToCopy.replace(/`/g, '\\`')}\`)"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg></button></li>`;
+        return `<li class="flex items-start">${icon}<div class="flex-grow">${content}</div><div class="flex items-center flex-shrink-0">${generateBtnHTML}<button class="ml-2 p-1 text-gray-400 hover:text-white copy-btn" onclick="copyToClipboard(this, \`${textToCopy.replace(/`/g, '\\`')}\`)"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg></button></div></li>`;
     }).join('');
     
     const paletteHTML = color_palette.map(color => `
@@ -228,6 +239,7 @@ function createSingleResultHTML(data) {
     const trendHTML = trend_analysis ? `<div class="mt-6 bg-gray-900/50 p-6 rounded-xl border border-gray-700"><h3 class="text-xl font-bold mb-4">Análise de Tendências do Nicho</h3><p class="text-gray-300">${trend_analysis}</p></div>` : '';
     const colorPaletteHTML = color_palette.length > 0 ? `<div class="mt-6 bg-gray-900/50 p-6 rounded-xl border border-gray-700"><h3 class="text-xl font-bold mb-4">Paleta de Cores Sugerida</h3><div id="color-palette-container" class="flex justify-center gap-4">${paletteHTML}</div></div>` : '';
 
+    // Removida a seção de títulos daqui.
     return `
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 md:gap-8">
             <div class="lg:col-span-1 bg-gray-900/50 p-6 rounded-xl flex flex-col items-center justify-center border border-gray-700">
@@ -242,6 +254,7 @@ function createSingleResultHTML(data) {
         </div>
         ${trendHTML}
         ${colorPaletteHTML}
+        <div id="generated-image-section" class="hidden mt-6 bg-gray-900/50 p-6 rounded-xl border border-gray-700 text-center"><h3 class="text-xl font-bold mb-4">Nova Thumbnail Gerada com IA</h3><div id="generated-image-container" class="flex justify-center items-center min-h-[200px]"></div></div>
         <div class="mt-8 flex justify-center"><button id="restart-button-results" class="bg-gray-600 text-white font-bold py-3 px-10 rounded-lg hover:bg-gray-500">Analisar Outra</button></div>
     `;
 }
@@ -251,41 +264,4 @@ function createComparisonResultHTML(data) {
     const loserColor = 'border-gray-700';
 
     const renderDetails = (details) => {
-        const safeDetails = details && Array.isArray(details) ? details : [];
-        return safeDetails.map(d => `
-            <div class="flex justify-between items-center text-sm">
-                <span>${d.name || 'Critério'}</span>
-                <span class="font-bold">${d.score || 0}</span>
-            </div>`).join('');
-    }
-    
-    return `
-        <div class="space-y-6">
-            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <div class="bg-gray-900/50 p-4 rounded-xl border-2 ${data.comparison_result.winner === 'Versão A' ? winnerColor : loserColor}">
-                    <h3 class="font-bold text-lg text-center mb-2">Versão A</h3>
-                    <img src="${imageA_Data}" class="rounded-lg mb-4">
-                    <div class="space-y-2">${renderDetails(data.version_a.details)}</div>
-                </div>
-                <div class="bg-gray-900/50 p-4 rounded-xl border-2 ${data.comparison_result.winner === 'Versão B' ? loserColor : winnerColor}">
-                    <h3 class="font-bold text-lg text-center mb-2">Versão B</h3>
-                    <img src="${imageB_Data}" class="rounded-lg mb-4">
-                    <div class="space-y-2">${renderDetails(data.version_b.details)}</div>
-                </div>
-            </div>
-            <div class="bg-indigo-900/40 p-6 rounded-xl border border-indigo-700 text-center">
-                <h2 class="text-2xl font-bold mb-2">Vencedora: <span class="gradient-text">${data.comparison_result.winner}</span></h2>
-                <p class="text-gray-300">${data.comparison_result.justification}</p>
-            </div>
-            <div class="mt-8 flex justify-center"><button id="restart-button-results" class="bg-gray-600 text-white font-bold py-3 px-10 rounded-lg hover:bg-gray-500">Analisar Outras</button></div>
-        </div>
-    `;
-}
-
-function resetApp() {
-    DOMElements.resultsSection.classList.add('hidden');
-    DOMElements.inputSection.classList.remove('hidden');
-    resetInputs();
-}
-
-document.addEventListener('DOMContentLoaded', setupEventListeners);
+        const safeDetails = details && Array.isAr
