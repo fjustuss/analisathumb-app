@@ -72,7 +72,7 @@ def analyze_endpoint():
         app.logger.error(f"Erro em /api/analyze: {e}")
         return jsonify({"error": f"Ocorreu um erro interno durante a análise: {e}"}), 500
 
-# --- ROTA PARA GERAÇÃO DE IMAGEM (COMPLETA E CORRIGIDA) ---
+# --- ROTA PARA GERAÇÃO DE IMAGEM ---
 @app.route('/api/generate-image', methods=['POST'])
 def generate_image_endpoint():
     app.logger.info(">>> Rota /api/generate-image acessada <<<")
@@ -94,12 +94,14 @@ def generate_image_endpoint():
             "Content-Type": "application/json"
         }
         
+        # --- CORREÇÃO: Adicionado prefixo do provedor ao nome do modelo ---
         payload = {
-            "model": "dall-e-3",
+            "model": "provider-4/dall-e-3",
             "prompt": prompt,
             "n": 1,
             "size": "1792x1024"
         }
+        # --- FIM DA CORREÇÃO ---
         
         response = requests.post("https://api.a4f.co/v1/images/generations", headers=headers, json=payload)
         app.logger.info(f"Resposta da API A4F.co (status {response.status_code})")
