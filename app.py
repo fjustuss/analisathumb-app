@@ -94,7 +94,6 @@ def generate_image_endpoint():
             "Content-Type": "application/json"
         }
         
-        # --- ATUALIZAÇÃO: Nome do modelo alterado ---
         payload = {
             "model": "provider-5/gpt-image-1",
             "prompt": prompt,
@@ -102,6 +101,7 @@ def generate_image_endpoint():
             "size": "1792x1024"
         }
         
+        # --- CORREÇÃO: URL do endpoint da A4F.co corrigida ---
         response = requests.post("https://api.a4f.co/v1/images/generations", headers=headers, json=payload)
         app.logger.info(f"Resposta da API A4F.co (status {response.status_code})")
         response.raise_for_status()
