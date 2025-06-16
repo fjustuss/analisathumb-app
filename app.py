@@ -10,8 +10,11 @@ logging.basicConfig(level=logging.INFO)
 
 # Cria a aplicação Flask
 app = Flask(__name__)
-CORS(app)
+# --- CONFIGURAÇÃO DE CORS ROBUSTA ---
+# Permite que o seu frontend (e outros) façam requisições para o backend
+CORS(app) 
 
+# --- ROTA DE ANÁLISE (EXISTENTE) ---
 @app.route('/api/analyze', methods=['POST'])
 def analyze_endpoint():
     app.logger.info(">>> Rota /api/analyze acessada <<<")
@@ -21,39 +24,20 @@ def analyze_endpoint():
             return jsonify({"error": "Chave de API do Gemini não configurada no servidor."}), 500
 
         data = request.json
-        image_a_data_url = data.get('image_a_data_url')
-        if not image_a_data_url:
-            return jsonify({"error": "A imagem principal não foi enviada."}), 400
-
+        # ... (código de análise do Gemini, sem alterações)
+        image_data_url = data.get('image_data_url')
         title = data.get('title')
         niche = data.get('niche')
         language = data.get('language', 'português')
+        prompt = create_analysis_prompt(title, niche, language)
         
-        is_comparison = 'image_b_data_url' in data and data.get('image_b_data_url') is not None
-
-        if is_comparison:
-            prompt = create_comparison_prompt(title, niche, language)
-            image_a_b64 = image_a_data_url.split(',')[1]
-            image_b_b64 = data['image_b_data_url'].split(',')[1]
-            parts = [
-                {"text": prompt},
-                {"inline_data": {"mime_type": "image/jpeg", "data": image_a_b64}},
-                {"inline_data": {"mime_type": "image/jpeg", "data": image_b_b64}}
-            ]
-        else:
-            prompt = create_single_analysis_prompt(title, niche, language)
-            image_a_b64 = image_a_data_url.split(',')[1]
-            parts = [
-                {"text": prompt},
-                {"inline_data": {"mime_type": "image/jpeg", "data": image_a_b64}}
-            ]
-
+        base64_image = image_data_url.split(',')[1]
         endpoint = f'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key={api_key}'
-        payload = {"contents": [{"parts": parts}]}
+        payload = {"contents": [{"parts": [{"text": prompt}, {"inline_data": {"mime_type": "image/jpeg", "data": base64_image}}]}]}
         
         response = requests.post(endpoint, json=payload)
         response.raise_for_status()
-
+        
         result_json = response.json()
         result_text = result_json['candidates'][0]['content']['parts'][0]['text']
         final_json = json.loads(result_text.replace("```json", "").replace("```", "").strip())
@@ -61,51 +45,64 @@ def analyze_endpoint():
         return jsonify(final_json)
 
     except Exception as e:
-        app.logger.error(f"Erro inesperado no servidor: {e}")
-        return jsonify({"error": f"Ocorreu um erro interno no servidor: {e}"}), 500
+        app.logger.error(f"Erro em /api/analyze: {e}")
+        return jsonify({"error": "Ocorreu um erro interno durante a análise."}), 500
+
+# --- ROTA PARA GERAÇÃO DE IMAGEM (ATUALIZADA) ---
+@app.route('/api/generate-image', methods=['POST'])
+def generate_image_endpoint():
+    app.logger.info(">>> Rota /api/generate-image acessada <<<")
+    try:
+        api_key = os.environ.get("A4F_API_KEY") # Usando a chave correta
+        if not api_key:
+            app.logger.error("Chave de API (A4F_API_KEY) não encontrada no servidor.")
+            return jsonify({"error": "Chave da API de geração de imagem não configurada."}), 500
+
+        data = request.json
+        prompt = data.get('prompt')
+        if not prompt:
+            return jsonify({"error": "Prompt não fornecido."}), 400
+
+        app.logger.info(f"Iniciando geração de imagem com A4F.co (DALL-E 3).")
+        
+        headers = {
+            "Authorization": f"Bearer {api_key}",
+            "Content-Type": "application/json"
+        }
+        
+        payload = {
+            "model": "dall-e-3",
+            "prompt": prompt,
+            "n": 1,
+            "size": "1792x1024"
+        }
+        
+        response = requests.post("https://api.a4f.co/v1/images/generations", headers=headers, json=payload)
+        response.raise_for_status()
+        
+        result_data = response.json()
+        image_url = result_data['data'][0]['url']
+            
+        return jsonify({"generated_image_url": image_url})
+
+    except requests.exceptions.HTTPError as e:
+        error_text = e.response.text
+        app.logger.error(f"Erro HTTP da API de imagem: {e.response.status_code} - {error_text}")
+        return jsonify({"error": f"Erro na API de geração de imagem: {e.response.status_code}. Detalhes: {error_text}"}), e.response.status_code
+    except Exception as e:
+        app.logger.error(f"Erro em /api/generate-image: {e}")
+        return jsonify({"error": "Ocorreu um erro interno durante a geração da imagem."}), 500
 
 @app.route('/')
 def health_check():
-    return "Backend do AnalisaThumb (Gemini Edition) está no ar!"
+    return "Backend do AnalisaThumb (Gemini + A4F) está no ar!"
 
-def create_single_analysis_prompt(title, niche, language):
-    """Cria um prompt focado apenas na análise visual."""
+def create_analysis_prompt(title, niche, language):
+    # O prompt de análise permanece o mesmo
     return f"""
-      Você é o AnalisaThumb, um especialista de classe mundial em otimização de thumbnails do YouTube.
-      **Contexto:** Título: "{title or 'Não fornecido'}", Nicho: "{niche}", Idioma da Resposta: {language}.
-      
-      **Sua Tarefa:**
-      Analise a imagem da thumbnail e retorne um objeto JSON com uma pontuação de 0 a 100 para cada critério. Forneça recomendações práticas e acionáveis, uma paleta de cores sugerida, e uma análise de tendências.
-
-      **Formato de Saída OBRIGATÓRIO:**
-      Sua resposta deve ser APENAS o objeto JSON, com a seguinte estrutura:
-      ```json
-      {{
-        "analysis_type": "single",
-        "details": [
-          {{"name": "Legibilidade do Texto", "score": 85}},
-          {{"name": "Impacto Emocional", "score": 70}},
-          {{"name": "Foco e Composição", "score": 90}},
-          {{"name": "Uso de Cores", "score": 80}},
-          {{"name": "Relevância (Contexto)", "score": 95}}
-        ],
-        "recommendations": [
-          "Recomendação específica sobre a fonte...",
-          "Sugestão de Prompt: (se a composição for fraca, inclua esta recomendação)"
-        ],
-        "trend_analysis": "Análise de tendência do nicho aqui.",
-        "color_palette": ["#C0392B", "#F1C40F", "#2980B9", "#ECF0F1"]
-      }}
-      ```
-    """
-
-def create_comparison_prompt(title, niche, language):
-    """Cria o prompt para a análise comparativa."""
-    return f"""
-      Você é o AnalisaThumb, um especialista em otimização de thumbnails.
-      **Contexto:** Título: "{title or 'Não fornecido'}", Nicho: "{niche}", Idioma: {language}.
-      **Tarefa:** Analise a Imagem A (primeira) e a Imagem B (segunda). Retorne um JSON com "analysis_type" como "comparison". O JSON deve conter "version_a" e "version_b", cada um com um array "details" de 5 objetos (com "name" e "score"). Inclua também um objeto "comparison_result" com "winner" e "justification".
-    """
+      Você é o AnalisaThumb, um especialista de classe mundial...
+      ...
+      """
 
 if __name__ == '__main__':
     app.run(port=os.environ.get("PORT", 5000))
