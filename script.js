@@ -1,5 +1,5 @@
 // ===================================================================================
-// ANALISATHUMB - JAVASCRIPT PRINCIPAL
+// ANALISATHUMB - JAVASCRIPT PRINCIPAL (VERSÃO CORRIGIDA)
 // ===================================================================================
 
 // --- 1. SELETORES DE ELEMENTOS DO DOM ---
@@ -53,11 +53,9 @@ function setupEventListeners() {
 
 function toggleComparisonMode() {
     isComparisonMode = DOMElements.abToggle.checked;
-
     DOMElements.uploaderB.classList.toggle('hidden', !isComparisonMode);
     DOMElements.previewArea.classList.toggle('md:grid-cols-2', isComparisonMode);
     DOMElements.labelVersionA.textContent = isComparisonMode ? 'Versão A' : 'Thumbnail Principal';
-    
     resetInputs();
 }
 
@@ -239,7 +237,6 @@ function createSingleResultHTML(data) {
     const trendHTML = trend_analysis ? `<div class="mt-6 bg-gray-900/50 p-6 rounded-xl border border-gray-700"><h3 class="text-xl font-bold mb-4">Análise de Tendências do Nicho</h3><p class="text-gray-300">${trend_analysis}</p></div>` : '';
     const colorPaletteHTML = color_palette.length > 0 ? `<div class="mt-6 bg-gray-900/50 p-6 rounded-xl border border-gray-700"><h3 class="text-xl font-bold mb-4">Paleta de Cores Sugerida</h3><div id="color-palette-container" class="flex justify-center gap-4">${paletteHTML}</div></div>` : '';
 
-    // Removida a seção de títulos daqui.
     return `
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 md:gap-8">
             <div class="lg:col-span-1 bg-gray-900/50 p-6 rounded-xl flex flex-col items-center justify-center border border-gray-700">
@@ -264,4 +261,81 @@ function createComparisonResultHTML(data) {
     const loserColor = 'border-gray-700';
 
     const renderDetails = (details) => {
-        const safeDetails = details && Array.isAr
+        const safeDetails = details && Array.isArray(details) ? details : [];
+        return safeDetails.map(d => `
+            <div class="flex justify-between items-center text-sm">
+                <span>${d.name || 'Critério'}</span>
+                <span class="font-bold">${d.score || 0}</span>
+            </div>`).join('');
+    }
+    
+    return `
+        <div class="space-y-6">
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <div class="bg-gray-900/50 p-4 rounded-xl border-2 ${data.comparison_result.winner === 'Versão A' ? winnerColor : loserColor}">
+                    <h3 class="font-bold text-lg text-center mb-2">Versão A</h3>
+                    <img src="${imageA_Data}" class="rounded-lg mb-4">
+                    <div class="space-y-2">${renderDetails(data.version_a.details)}</div>
+                </div>
+                <div class="bg-gray-900/50 p-4 rounded-xl border-2 ${data.comparison_result.winner === 'Versão B' ? loserColor : winnerColor}">
+                    <h3 class="font-bold text-lg text-center mb-2">Versão B</h3>
+                    <img src="${imageB_Data}" class="rounded-lg mb-4">
+                    <div class="space-y-2">${renderDetails(data.version_b.details)}</div>
+                </div>
+            </div>
+            <div class="bg-indigo-900/40 p-6 rounded-xl border border-indigo-700 text-center">
+                <h2 class="text-2xl font-bold mb-2">Vencedora: <span class="gradient-text">${data.comparison_result.winner}</span></h2>
+                <p class="text-gray-300">${data.comparison_result.justification}</p>
+            </div>
+            <div class="mt-8 flex justify-center"><button id="restart-button-results" class="bg-gray-600 text-white font-bold py-3 px-10 rounded-lg hover:bg-gray-500">Analisar Outras</button></div>
+        </div>
+    `;
+}
+
+async function generateImage(prompt) {
+    const genSection = document.getElementById('generated-image-section');
+    const genContainer = document.getElementById('generated-image-container');
+    
+    if (!genSection || !genContainer) {
+        console.error("Elementos para geração de imagem não encontrados!");
+        return;
+    }
+    
+    genSection.classList.remove('hidden');
+    genContainer.innerHTML = `<div role="status">
+                                <svg class="inline w-8 h-8 text-gray-600 animate-spin fill-blue-500" viewBox="0 0 100 101" ...></svg>
+                                <span class="ml-2">Gerando imagem...</span>
+                             </div>`;
+
+    try {
+        const response = await fetch('https://analisathumb.onrender.com/api/generate-image', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ prompt: prompt })
+        });
+
+        if (!response.ok) {
+            const errorResult = await response.json();
+            throw new Error(errorResult.error || `Erro do servidor (${response.status})`);
+        }
+
+        const result = await response.json();
+        const imageUrl = `data:image/png;base64,${result.generated_image_b64}`;
+        genContainer.innerHTML = `<img src="${imageUrl}" class="rounded-lg shadow-lg max-w-md w-full" alt="Imagem gerada por IA">`;
+
+    } catch (error) {
+        genContainer.innerHTML = `<p class="text-red-400">Falha ao gerar a imagem: ${error.message}</p>`;
+    }
+}
+
+function resetApp() {
+    DOMElements.resultsSection.classList.add('hidden');
+    
+    const genSection = document.getElementById('generated-image-section');
+    if(genSection) genSection.classList.add('hidden');
+    
+    DOMElements.inputSection.classList.remove('hidden');
+    resetInputs();
+}
+
+document.addEventListener('DOMContentLoaded', setupEventListeners);
