@@ -22,10 +22,12 @@ def analyze_endpoint():
 
         data = request.json
         
-        image_data_url = data.get('image_a_data_url')
-        if not image_data_url:
+        # --- CORREÇÃO: Definir a variável antes de ser usada ---
+        image_a_data_url = data.get('image_a_data_url')
+        if not image_a_data_url:
             app.logger.error("Requisição recebida sem a imagem principal (image_a_data_url).")
             return jsonify({"error": "A imagem principal não foi enviada. Por favor, tente novamente."}), 400
+        # --- FIM DA CORREÇÃO ---
 
         title = data.get('title')
         niche = data.get('niche')
