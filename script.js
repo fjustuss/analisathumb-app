@@ -1,5 +1,5 @@
 // ===================================================================================
-// ANALISATHUMB - JAVASCRIPT PRINCIPAL (VERSÃO CORRIGIDA E COMPLETA)
+// ANALISATHUMB - JAVASCRIPT PRINCIPAL (VERSÃO FINAL COMPLETA)
 // ===================================================================================
 
 // --- 1. SELETORES DE ELEMENTOS DO DOM ---
@@ -198,7 +198,19 @@ function copyToClipboard(element, text) {
 
 function createSingleResultHTML(data) {
     const details = data.details && Array.isArray(data.details) ? data.details : [];
+    const recommendations = data.recommendations && Array.isArray(data.recommendations) ? data.recommendations : [];
+    const color_palette = data.color_palette && Array.isArray(data.color_palette) ? data.color_palette : [];
+    const trend_analysis = data.trend_analysis || "";
     
+    let promptSuggestion = null;
+    const filteredRecommendations = recommendations.filter(rec => {
+        if (rec.startsWith('Sugestão de Prompt:')) {
+            promptSuggestion = rec.substring(18).trim();
+            return false;
+        }
+        return true;
+    });
+
     const finalScore = details.length > 0 ? Math.round(details.reduce((acc, item) => acc + (item.score || 0), 0) / details.length) : 0;
     
     setTimeout(() => {
@@ -216,7 +228,37 @@ function createSingleResultHTML(data) {
             <div class="flex justify-between items-center mb-1"><p class="font-semibold">${item.name || 'Critério'}</p><p class="font-bold text-lg ${getScoreColor(item.score || 0)}">${item.score || 0}/100</p></div>
             <div class="w-full bg-gray-700 rounded-full h-2.5"><div class="bg-gradient-to-r ${getGradientClass(item.score || 0)} h-2.5 rounded-full progress-bar-fill" style="width: 0%" data-width="${item.score || 0}%"></div></div>
         </div>`).join('');
+
+    const recommendationsHTML = filteredRecommendations.map(rec => {
+        const textToCopy = rec;
+        const icon = '<svg class="w-5 h-5 mr-3 text-indigo-400 flex-shrink-0 mt-0.5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 15-5-5 1.41-1.41L11 14.17l7.59-7.59L20 8l-9 9z"></path></svg>';
+        return `<li class="flex items-start">${icon}<div class="flex-grow"><span>${rec}</span></div><button class="ml-2 p-1 text-gray-400 hover:text-white copy-btn flex-shrink-0" onclick="copyToClipboard(this, \`${textToCopy.replace(/`/g, '\\`')}\`)"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg></button></li>`;
+    }).join('');
     
+    const paletteHTML = color_palette.map(color => `
+        <div class="text-center cursor-pointer" onclick="copyToClipboard(this.querySelector('p'), '${color}')">
+            <div class="w-16 h-16 rounded-lg border-2 border-gray-600 shadow-md" style="background-color: ${color};"></div>
+            <p class="text-sm font-mono mt-2 text-gray-400">${color}</p>
+        </div>`).join('');
+
+    let promptHTML = '';
+    if (promptSuggestion) {
+        promptHTML = `
+            <div class="mt-6 bg-gray-900/50 p-6 rounded-xl border border-gray-700">
+                <h3 class="text-xl font-bold mb-4">Prompt Sugerido para IA</h3>
+                <div class="prompt-suggestion p-4 rounded-md mb-4 flex items-center justify-between">
+                    <span class="flex-grow">${promptSuggestion}</span>
+                    <button class="ml-4 p-1 text-gray-400 hover:text-white copy-btn flex-shrink-0" onclick="copyToClipboard(this, \`${promptSuggestion.replace(/`/g, '\\`')}\`)"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg></button>
+                </div>
+                <button class="mt-4 w-full bg-blue-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-500 transition-all" onclick="generateImage('${promptSuggestion.replace(/'/g, "\\'")}')">
+                    Gerar Imagem com este Prompt
+                </button>
+            </div>`;
+    }
+
+    const trendHTML = trend_analysis ? `<div class="mt-6 bg-gray-900/50 p-6 rounded-xl border border-gray-700"><h3 class="text-xl font-bold mb-4">Análise de Tendências do Nicho</h3><p class="text-gray-300">${trend_analysis}</p></div>` : '';
+    const colorPaletteHTML = color_palette.length > 0 ? `<div class="mt-6 bg-gray-900/50 p-6 rounded-xl border border-gray-700"><h3 class="text-xl font-bold mb-4">Paleta de Cores Sugerida</h3><div id="color-palette-container" class="flex justify-center gap-4">${paletteHTML}</div></div>` : '';
+
     return `
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 md:gap-8">
             <div class="lg:col-span-1 bg-gray-900/50 p-6 rounded-xl flex flex-col items-center justify-center border border-gray-700">
@@ -226,8 +268,13 @@ function createSingleResultHTML(data) {
             </div>
             <div class="lg:col-span-2">
                 <div class="bg-gray-900/50 p-6 rounded-xl border border-gray-700 mb-6"><h3 class="text-xl font-bold mb-5">Análise Detalhada</h3><div class="space-y-4">${detailsHTML}</div></div>
+                <div class="bg-gray-900/50 p-6 rounded-xl border border-gray-700"><h3 class="text-xl font-bold mb-4">Recomendações para Melhorar</h3><ul class="space-y-3 h-48 overflow-y-auto pr-2 recommendations-list">${recommendationsHTML}</ul></div>
             </div>
         </div>
+        ${trendHTML}
+        ${promptHTML}
+        ${colorPaletteHTML}
+        <div id="generated-image-section" class="hidden mt-6 bg-gray-900/50 p-6 rounded-xl border border-gray-700 text-center"><h3 class="text-xl font-bold mb-4">Nova Thumbnail Gerada com IA</h3><div id="generated-image-container" class="flex justify-center items-center min-h-[200px]"></div></div>
         <div class="mt-8 flex justify-center"><button id="restart-button-results" class="bg-gray-600 text-white font-bold py-3 px-10 rounded-lg hover:bg-gray-500">Analisar Outra</button></div>
     `;
 }
@@ -268,8 +315,48 @@ function createComparisonResultHTML(data) {
     `;
 }
 
+async function generateImage(prompt) {
+    const genSection = document.getElementById('generated-image-section');
+    const genContainer = document.getElementById('generated-image-container');
+    
+    if (!genSection || !genContainer) {
+        console.error("Elementos para geração de imagem não encontrados!");
+        return;
+    }
+    
+    genSection.classList.remove('hidden');
+    genContainer.innerHTML = `<div role="status">
+                                <svg class="inline w-8 h-8 text-gray-600 animate-spin fill-blue-500" viewBox="0 0 100 101" ...></svg>
+                                <span class="ml-2">Gerando imagem...</span>
+                             </div>`;
+
+    try {
+        const response = await fetch('https://analisathumb.onrender.com/api/generate-image', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ prompt: prompt })
+        });
+
+        if (!response.ok) {
+            const errorResult = await response.json();
+            throw new Error(errorResult.error || `Erro do servidor (${response.status})`);
+        }
+
+        const result = await response.json();
+        const imageUrl = `data:image/png;base64,${result.generated_image_b64}`;
+        genContainer.innerHTML = `<img src="${imageUrl}" class="rounded-lg shadow-lg max-w-md w-full" alt="Imagem gerada por IA">`;
+
+    } catch (error) {
+        genContainer.innerHTML = `<p class="text-red-400">Falha ao gerar a imagem: ${error.message}</p>`;
+    }
+}
+
 function resetApp() {
     DOMElements.resultsSection.classList.add('hidden');
+    
+    const genSection = document.getElementById('generated-image-section');
+    if(genSection) genSection.classList.add('hidden');
+    
     DOMElements.inputSection.classList.remove('hidden');
     resetInputs();
 }
