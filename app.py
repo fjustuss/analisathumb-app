@@ -12,7 +12,7 @@ logging.basicConfig(level=logging.INFO)
 app = Flask(__name__)
 CORS(app) 
 
-# --- ROTA DE ANÁLISE ---
+# --- ROTA DE ANÁLISE (GEMINI) ---
 @app.route('/api/analyze', methods=['POST'])
 def analyze_endpoint():
     app.logger.info(">>> Rota /api/analyze acessada <<<")
@@ -77,7 +77,7 @@ def analyze_endpoint():
 def generate_image_endpoint():
     app.logger.info(">>> Rota /api/generate-image acessada <<<")
     try:
-        api_key = os.environ.get("A4F_API_KEY")
+        api_key = os.environ.get("A4F_API_KEY") 
         if not api_key:
             app.logger.error("Chave de API (A4F_API_KEY) não encontrada no servidor.")
             return jsonify({"error": "Chave da API de geração de imagem não configurada."}), 500
@@ -87,21 +87,20 @@ def generate_image_endpoint():
         if not prompt:
             return jsonify({"error": "Prompt não fornecido."}), 400
 
-        app.logger.info(f"Iniciando geração de imagem com A4F.co (DALL-E 3). Prompt: {prompt[:50]}...")
+        app.logger.info(f"Iniciando geração de imagem com A4F.co (GPT-Image-1).")
         
         headers = {
             "Authorization": f"Bearer {api_key}",
             "Content-Type": "application/json"
         }
         
-        # --- CORREÇÃO: Adicionado prefixo do provedor ao nome do modelo ---
+        # --- ATUALIZAÇÃO: Nome do modelo alterado ---
         payload = {
-            "model": "provider-4/dall-e-3",
+            "model": "provider-5/gpt-image-1",
             "prompt": prompt,
             "n": 1,
             "size": "1792x1024"
         }
-        # --- FIM DA CORREÇÃO ---
         
         response = requests.post("https://api.a4f.co/v1/images/generations", headers=headers, json=payload)
         app.logger.info(f"Resposta da API A4F.co (status {response.status_code})")
