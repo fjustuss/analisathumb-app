@@ -103,12 +103,11 @@ def generate_image_endpoint():
             "Content-Type": "application/json"
         }
         
-        # --- ATUALIZAÇÃO: Nome do modelo alterado ---
         payload = {
             "model": "provider-3/FLUX.1-schnell",
             "prompt": prompt,
             "n": 1,
-            "size": "1024x1024" # Tamanho padrão para este tipo de modelo
+            "size": "1024x1024"
         }
         
         response = requests.post("https://api.a4f.co/v1/images/generations", headers=headers, json=payload)
@@ -137,7 +136,8 @@ def generate_image_endpoint():
 def health_check():
     return "Backend do AnalisaThumb (Gemini + A4F) está no ar!"
 
-def create_analysis_prompt(title, niche, language):
+# --- FUNÇÕES DE PROMPT RESTAURADAS ---
+def create_single_analysis_prompt(title, niche, language):
     """
     Cria um prompt muito mais explícito para garantir o formato correto da resposta.
     """
@@ -169,6 +169,15 @@ def create_analysis_prompt(title, niche, language):
       **Instruções para Recomendações:**
       - Se a pontuação de "Foco e Composição" for menor que 75, você DEVE incluir uma recomendação que comece com "Sugestão de Prompt:". O prompt deve ser em inglês.
     """
+
+def create_comparison_prompt(title, niche, language):
+    """Cria o prompt para a análise comparativa."""
+    return f"""
+      Você é o AnalisaThumb, um especialista em otimização de thumbnails.
+      **Contexto:** Título: "{title or 'Não fornecido'}", Nicho: "{niche}", Idioma: {language}.
+      **Tarefa:** Analise a Imagem A (primeira) e a Imagem B (segunda). Retorne um JSON com "analysis_type" como "comparison", contendo "version_a" e "version_b", cada um com um array "details" de 5 objetos (com "name" e "score"). Inclua também um objeto "comparison_result" com "winner" e "justification".
+    """
+# --- FIM DAS FUNÇÕES RESTAURADAS ---
 
 if __name__ == '__main__':
     app.run(port=os.environ.get("PORT", 5000))
