@@ -183,41 +183,17 @@ function getGradientClass(score) {
 }
 
 function copyToClipboard(element, text) {
-    const textarea = document.createElement('textarea');
-    textarea.value = text;
-    document.body.appendChild(textarea);
-    textarea.select();
-    document.execCommand('copy');
-    document.body.removeChild(textarea);
-
-    const originalContent = element.innerHTML;
-    const isColorElement = element.tagName === 'P';
-
-    if (isColorElement) {
-        element.textContent = 'Copiado!';
-        setTimeout(() => { element.textContent = text; }, 1500);
-    } else {
+    navigator.clipboard.writeText(text).then(() => {
+        const originalContent = element.innerHTML;
         element.innerHTML = '<svg class="w-4 h-4 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>';
         setTimeout(() => { element.innerHTML = originalContent; }, 1500);
-    }
+    });
 }
 
 function createSingleResultHTML(data) {
     const details = data.details && Array.isArray(data.details) ? data.details : [];
     const recommendations = data.recommendations && Array.isArray(data.recommendations) ? data.recommendations : [];
-    const suggested_titles = data.suggested_titles && Array.isArray(data.suggested_titles) ? data.suggested_titles : [];
-    const color_palette = data.color_palette && Array.isArray(data.color_palette) ? data.color_palette : [];
-    const trend_analysis = data.trend_analysis || "";
     
-    let promptSuggestion = null;
-    const filteredRecommendations = recommendations.filter(rec => {
-        if (rec.startsWith('Sugestão de Prompt:')) {
-            promptSuggestion = rec.substring(18).trim();
-            return false;
-        }
-        return true;
-    });
-
     const finalScore = details.length > 0 ? Math.round(details.reduce((acc, item) => acc + (item.score || 0), 0) / details.length) : 0;
     
     setTimeout(() => {
@@ -236,42 +212,22 @@ function createSingleResultHTML(data) {
             <div class="w-full bg-gray-700 rounded-full h-2.5"><div class="bg-gradient-to-r ${getGradientClass(item.score || 0)} h-2.5 rounded-full progress-bar-fill" style="width: 0%" data-width="${item.score || 0}%"></div></div>
         </div>`).join('');
 
-    const recommendationsHTML = filteredRecommendations.map(rec => {
-        const textToCopy = rec;
-        const icon = '<svg class="w-5 h-5 mr-3 text-indigo-400 flex-shrink-0 mt-0.5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 15-5-5 1.41-1.41L11 14.17l7.59-7.59L20 8l-9 9z"></path></svg>';
-        return `<li class="flex items-start">${icon}<div class="flex-grow"><span>${rec}</span></div><button class="ml-2 p-1 text-gray-400 hover:text-white copy-btn flex-shrink-0" onclick="copyToClipboard(this, \`${textToCopy.replace(/`/g, '\\`')}\`)"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg></button></li>`;
+    const recommendationsHTML = recommendations.map(rec => {
+        const isPrompt = rec.startsWith('Sugestão de Prompt:');
+        const textToCopy = isPrompt ? rec.substring(18).trim() : rec;
+        
+        // --- NOVA LÓGICA DO BOTÃO ---
+        const actionButtonHTML = isPrompt 
+            ? `<button class="ml-2 p-1 text-blue-400 hover:text-white" title="Gerar no ImageFX" onclick="window.open('https://imagefx.withgoogle.com/?prompt=${encodeURIComponent(textToCopy)}', '_blank')">
+                   <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path d="M17.414 2.586a2 2 0 00-2.828 0L7 10.172V13h2.828l7.586-7.586a2 2 0 000-2.828zM5 12V7a2 2 0 012-2h2.586l-2.5 2.5L5 12zM3 16a2 2 0 012-2h10a2 2 0 012 2v2a2 2 0 01-2-2H5a2 2 0 01-2-2v-2z"></path></svg>
+               </button>`
+            : '';
+
+        const content = isPrompt ? `<div class="prompt-suggestion">${textToCopy}</div>` : `<span>${rec}</span>`;
+        const icon = !isPrompt ? '<svg class="w-5 h-5 mr-3 text-indigo-400 flex-shrink-0 mt-0.5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 15-5-5 1.41-1.41L11 14.17l7.59-7.59L20 8l-9 9z"></path></svg>' : '';
+        
+        return `<li class="flex items-start">${icon}<div class="flex-grow">${content}</div><div class="flex items-center flex-shrink-0">${actionButtonHTML}<button class="ml-2 p-1 text-gray-400 hover:text-white copy-btn" onclick="copyToClipboard(this, \`${textToCopy.replace(/`/g, '\\`')}\`)"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg></button></div></li>`;
     }).join('');
-    
-    const titlesHTML = suggested_titles.map(title => `
-        <li class="flex items-center justify-between p-2 bg-gray-800/50 rounded-md">
-            <div class="flex items-center mr-2"><svg class="w-5 h-5 mr-3 text-indigo-400 flex-shrink-0" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" /></svg><span>${title}</span></div>
-            <button class="ml-2 p-1 text-gray-400 hover:text-white copy-btn flex-shrink-0" onclick="copyToClipboard(this, \`${title.replace(/`/g, '\\`')}\`)"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg></button>
-        </li>`).join('');
-    
-    const paletteHTML = color_palette.map(color => `
-        <div class="text-center cursor-pointer" onclick="copyToClipboard(this.querySelector('p'), '${color}')">
-            <div class="w-16 h-16 rounded-lg border-2 border-gray-600 shadow-md" style="background-color: ${color};"></div>
-            <p class="text-sm font-mono mt-2 text-gray-400">${color}</p>
-        </div>`).join('');
-
-    let promptHTML = '';
-    if (promptSuggestion) {
-        promptHTML = `
-            <div class="mt-6 bg-gray-900/50 p-6 rounded-xl border border-gray-700">
-                <h3 class="text-xl font-bold mb-4">Prompt Sugerido para IA</h3>
-                <div class="prompt-suggestion p-4 rounded-md mb-4 flex items-center justify-between">
-                    <span class="flex-grow">${promptSuggestion}</span>
-                    <button class="ml-4 p-1 text-gray-400 hover:text-white copy-btn flex-shrink-0" onclick="copyToClipboard(this, \`${promptSuggestion.replace(/`/g, '\\`')}\`)"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg></button>
-                </div>
-                <button class="mt-4 w-full bg-blue-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-500 transition-all" onclick="generateImage('${promptSuggestion.replace(/'/g, "\\'")}')">
-                    Gerar Imagem com este Prompt
-                </button>
-            </div>`;
-    }
-
-    const trendHTML = trend_analysis ? `<div class="mt-6 bg-gray-900/50 p-6 rounded-xl border border-gray-700"><h3 class="text-xl font-bold mb-4">Análise de Tendências do Nicho</h3><p class="text-gray-300">${trend_analysis}</p></div>` : '';
-    const suggestedTitlesHTML = suggested_titles.length > 0 ? `<div class="mt-6 bg-gray-900/50 p-6 rounded-xl border border-gray-700"><h3 class="text-xl font-bold mb-4">Sugestões de Títulos Otimizados</h3><ul class="space-y-3">${titlesHTML}</ul></div>` : '';
-    const colorPaletteHTML = color_palette.length > 0 ? `<div class="mt-6 bg-gray-900/50 p-6 rounded-xl border border-gray-700"><h3 class="text-xl font-bold mb-4">Paleta de Cores Sugerida</h3><div id="color-palette-container" class="flex justify-center gap-4">${paletteHTML}</div></div>` : '';
 
     return `
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 md:gap-8">
@@ -285,17 +241,12 @@ function createSingleResultHTML(data) {
                 <div class="bg-gray-900/50 p-6 rounded-xl border border-gray-700"><h3 class="text-xl font-bold mb-4">Recomendações para Melhorar</h3><ul class="space-y-3 h-48 overflow-y-auto pr-2 recommendations-list">${recommendationsHTML}</ul></div>
             </div>
         </div>
-        ${promptHTML}
-        ${trendHTML}
-        ${suggestedTitlesHTML}
-        ${colorPaletteHTML}
-        <div id="generated-image-section" class="hidden mt-6 bg-gray-900/50 p-6 rounded-xl border border-gray-700 text-center"><h3 class="text-xl font-bold mb-4">Nova Thumbnail Gerada com IA</h3><div id="generated-image-container" class="flex justify-center items-center min-h-[200px]"></div></div>
         <div class="mt-8 flex justify-center"><button id="restart-button-results" class="bg-gray-600 text-white font-bold py-3 px-10 rounded-lg hover:bg-gray-500">Analisar Outra</button></div>
     `;
 }
 
 function createComparisonResultHTML(data) {
-    const winnerColor = 'border-green-500 shadow-green-500/30';
+    const winnerColor = 'border-green-500';
     const loserColor = 'border-gray-700';
 
     const renderDetails = (details) => {
@@ -330,45 +281,8 @@ function createComparisonResultHTML(data) {
     `;
 }
 
-async function generateImage(prompt) {
-    const genSection = document.getElementById('generated-image-section');
-    const genContainer = document.getElementById('generated-image-container');
-    
-    if (!genSection || !genContainer) {
-        console.error("Elementos para geração de imagem não encontrados!");
-        return;
-    }
-    
-    genSection.classList.remove('hidden');
-    genContainer.innerHTML = `<div role="status">...</div>`;
-
-    try {
-        const response = await fetch('https://analisathumb.onrender.com/api/generate-image', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ prompt: prompt })
-        });
-
-        if (!response.ok) {
-            const errorResult = await response.json();
-            throw new Error(errorResult.error || `Erro do servidor (${response.status})`);
-        }
-
-        const result = await response.json();
-        const imageUrl = result.generated_image_url;
-        genContainer.innerHTML = `<img src="${imageUrl}" class="rounded-lg shadow-lg max-w-md w-full" alt="Imagem gerada por IA">`;
-
-    } catch (error) {
-        genContainer.innerHTML = `<p class="text-red-400">Falha ao gerar a imagem: ${error.message}</p>`;
-    }
-}
-
 function resetApp() {
     DOMElements.resultsSection.classList.add('hidden');
-    
-    const genSection = document.getElementById('generated-image-section');
-    if(genSection) genSection.classList.add('hidden');
-    
     DOMElements.inputSection.classList.remove('hidden');
     resetInputs();
 }
