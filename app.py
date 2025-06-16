@@ -32,6 +32,7 @@ def analyze_endpoint():
         niche = data.get('niche')
         language = data.get('language', 'português')
         
+        # O prompt é criado com a lógica completa
         prompt = create_analysis_prompt(title, niche, language)
         
         base64_image = image_data_url.split(',')[1]
@@ -72,61 +73,25 @@ def analyze_endpoint():
         app.logger.error(f"Erro em /api/analyze: {e}")
         return jsonify({"error": f"Ocorreu um erro interno durante a análise: {e}"}), 500
 
-# --- ROTA PARA GERAÇÃO DE IMAGEM ---
+# --- ROTA PARA GERAÇÃO DE IMAGEM (MODO DE DEBUG) ---
 @app.route('/api/generate-image', methods=['POST'])
 def generate_image_endpoint():
-    app.logger.info(">>> Rota /api/generate-image acessada <<<")
-    try:
-        api_key = os.environ.get("A4F_API_KEY") 
-        if not api_key:
-            app.logger.error("Chave de API (A4F_API_KEY) não encontrada no servidor.")
-            return jsonify({"error": "Chave da API de geração de imagem não configurada."}), 500
-
-        data = request.json
-        prompt = data.get('prompt')
-        if not prompt:
-            return jsonify({"error": "Prompt não fornecido."}), 400
-
-        app.logger.info(f"Iniciando geração de imagem com A4F.co (Shuttle-3 Diffusion).")
-        
-        headers = {
-            "Authorization": f"Bearer {api_key}",
-            "Content-Type": "application/json"
-        }
-        
-        # --- ATUALIZAÇÃO: Nome do modelo alterado ---
-        payload = {
-            "model": "provider-3/shuttle-3-diffusion",
-            "prompt": prompt,
-            "n": 1,
-            "size": "1024x1024" # Usando um tamanho padrão, pode ser ajustado
-        }
-        
-        response = requests.post("https://api.a4f.co/v1/images/generations", headers=headers, json=payload)
-        app.logger.info(f"Resposta da API A4F.co (status {response.status_code})")
-        response.raise_for_status()
-        
-        result_data = response.json()
-        
-        image_url = result_data.get('data', [{}])[0].get('url')
-        if not image_url:
-            app.logger.error(f"Resposta da API de imagem não continha uma URL. Recebido: {result_data}")
-            raise ValueError("A resposta da API de imagem não continha uma URL.")
-            
-        return jsonify({"generated_image_url": image_url})
-
-    except requests.exceptions.HTTPError as e:
-        error_text = e.response.text
-        app.logger.error(f"Erro HTTP da API de imagem: {e.response.status_code} - {error_text}")
-        return jsonify({"error": f"Erro na API de geração de imagem: {e.response.status_code}. Detalhes: {error_text}"}), e.response.status_code
-    except Exception as e:
-        app.logger.error(f"Erro em /api/generate-image: {e}")
-        return jsonify({"error": "Ocorreu um erro interno durante a geração da imagem."}), 500
+    app.logger.info(">>> Rota /api/generate-image acessada (MODO DEBUG) <<<")
+    
+    # Em vez de chamar a API externa, retornamos instantaneamente uma resposta de sucesso.
+    # Usamos uma URL de imagem de placeholder para o teste.
+    mock_image_url = "https://placehold.co/1792x1024/1a202c/ffffff/png?text=Imagem+Gerada+com+Sucesso!"
+    
+    app.logger.info(f"Retornando URL de imagem de teste: {mock_image_url}")
+    
+    # Retorna um JSON no formato que o frontend espera.
+    # Note que a chave é 'generated_image_url' para corresponder ao script.js que espera uma URL.
+    return jsonify({"generated_image_url": mock_image_url})
 
 
 @app.route('/')
 def health_check():
-    return "Backend do AnalisaThumb (Gemini + A4F) está no ar!"
+    return "Backend do AnalisaThumb (Gemini + A4F - MODO DEBUG) está no ar!"
 
 def create_analysis_prompt(title, niche, language):
     """
@@ -154,7 +119,13 @@ def create_analysis_prompt(title, niche, language):
         "recommendations": [
           "Recomendação 1",
           "Recomendação 2"
-        ]
+        ],
+        "suggested_titles": [
+          "Sugestão de título 1",
+          "Sugestão de título 2"
+        ],
+        "trend_analysis": "Análise curta sobre como esta thumbnail se alinha com as tendências atuais do nicho.",
+        "color_palette": ["#C0392B", "#F1C40F", "#2980B9", "#ECF0F1"]
       }}
       ```
       **Instruções para Recomendações:**

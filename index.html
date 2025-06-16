@@ -20,7 +20,6 @@
 
         <div id="app-container" class="bg-gray-800/50 backdrop-blur-sm p-6 md:p-8 rounded-2xl shadow-2xl border border-gray-700">
             <div id="input-section">
-                <!-- Toggle A/B Test -->
                 <div class="flex items-center justify-center mb-6">
                     <label for="ab-test-toggle" class="flex items-center cursor-pointer">
                         <span class="mr-3 text-sm font-medium text-gray-300">Análise Simples</span>
@@ -32,7 +31,6 @@
                     </label>
                 </div>
 
-                <!-- Container para Uploaders -->
                 <div id="upload-container">
                     <div id="upload-grid-container" class="grid grid-cols-1 md:grid-cols-1 gap-4">
                         <div>
@@ -59,15 +57,44 @@
                 </div>
                 
                 <div id="context-inputs-container" class="hidden mt-6 space-y-4">
-                    <!-- Preview Area -->
                     <div id="preview-area" class="grid grid-cols-1 md:grid-cols-1 gap-4 place-items-center">
                         <img id="image-preview-a" class="hidden w-full max-w-xs mx-auto rounded-lg shadow-lg border-2 border-gray-700">
                         <img id="image-preview-b" class="hidden w-full max-w-xs mx-auto rounded-lg shadow-lg border-2 border-gray-700">
                     </div>
-                    <!-- Context Fields -->
                     <div class="max-w-md mx-auto grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div class="text-left"><label for="language-select" class="block mb-2 text-sm font-medium">Idioma</label><select id="language-select" class="w-full bg-gray-900 border border-gray-600 rounded-lg p-2.5"><option selected value="português">Português</option><option value="english">English (Inglês)</option></select></div>
-                        <div class="text-left"><label for="niche-select" class="block mb-2 text-sm font-medium">Nicho</label><select id="niche-select" class="w-full bg-gray-900 border border-gray-600 rounded-lg p-2.5"><option selected>Tecnologia / IA</option><option>Games</option><option>Finanças</option><option value="Outro">Outro</option></select></div>
+                        <div class="text-left">
+                            <label for="language-select" class="block mb-2 text-sm font-medium">Idioma</label>
+                            <select id="language-select" class="w-full bg-gray-900 border border-gray-600 rounded-lg p-2.5">
+                                <option selected value="português">Português</option>
+                                <option value="english">English (Inglês)</option>
+                                <option value="español">Español (Espanhol)</option>
+                                <option value="français">Français (Francês)</option>
+                                <option value="deutsch">Deutsch (Alemão)</option>
+                                <option value="italiano">Italiano</option>
+                                <option value="Русский">Русский (Russo)</option>
+                                <option value="日本語">日本語 (Japonês)</option>
+                                <option value="한국어">한국어 (Coreano)</option>
+                                <option value="中文">中文 (Mandarim)</option>
+                                <option value="हिन्दी">हिन्दी (Hindi)</option>
+                                <option value="العربية">العربية (Árabe)</option>
+                                <option value="Türkçe">Türkçe (Turco)</option>
+                                <option value="Polski">Polski (Polonês)</option>
+                                <option value="Nederlands">Nederlands (Holandês)</option>
+                                <option value="norsk">Norsk (Norueguês)</option>
+                            </select>
+                        </div>
+                        <div class="text-left">
+                            <label for="niche-select" class="block mb-2 text-sm font-medium">Nicho</label>
+                            <select id="niche-select" class="w-full bg-gray-900 border border-gray-600 rounded-lg p-2.5">
+                                <option selected>Tecnologia / IA</option>
+                                <option>Games</option>
+                                <option>Finanças</option>
+                                <option>Vlogs / Lifestyle</option>
+                                <option>Educação</option>
+                                <option>Espiritual</option>
+                                <option value="Outro">Outro</option>
+                            </select>
+                        </div>
                     </div>
                     <div class="max-w-md mx-auto text-left"><div id="custom-niche-container" class="hidden"><input type="text" id="custom-niche-input" class="w-full bg-gray-900 border border-gray-600 rounded-lg p-2.5" placeholder="Digite seu nicho..."></div></div>
                     <div class="max-w-md mx-auto text-left"><label for="video-title-input" class="block mb-2 text-sm font-medium">Título do Vídeo</label><input type="text" id="video-title-input" class="w-full bg-gray-900 border border-gray-600 rounded-lg p-2.5" placeholder="Ex: 5 Segredos da IA..."></div>
