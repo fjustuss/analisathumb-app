@@ -10,11 +10,9 @@ logging.basicConfig(level=logging.INFO)
 
 # Cria a aplicação Flask
 app = Flask(__name__)
-# --- CONFIGURAÇÃO DE CORS ROBUSTA ---
-# Permite que o seu frontend (e outros) façam requisições para o backend
 CORS(app) 
 
-# --- ROTA DE ANÁLISE (EXISTENTE) ---
+# --- ROTA DE ANÁLISE ---
 @app.route('/api/analyze', methods=['POST'])
 def analyze_endpoint():
     app.logger.info(">>> Rota /api/analyze acessada <<<")
@@ -25,7 +23,6 @@ def analyze_endpoint():
 
         data = request.json
         
-        # --- CORREÇÃO: Usar a chave correta 'image_a_data_url' e validar ---
         image_data_url = data.get('image_a_data_url')
         if not image_data_url:
             app.logger.error("Requisição recebida sem a imagem principal (image_a_data_url).")
@@ -41,26 +38,56 @@ def analyze_endpoint():
         payload = {"contents": [{"parts": [{"text": prompt}, {"inline_data": {"mime_type": "image/jpeg", "data": base64_image}}]}]}
         
         response = requests.post(endpoint, json=payload)
+        
+        app.logger.info(f"Resposta bruta da API Gemini (status {response.status_code}): {response.text}")
         response.raise_for_status()
         
         result_json = response.json()
-        result_text = result_json['candidates'][0]['content']['parts'][0]['text']
-        final_json = json.loads(result_text.replace("```json", "").replace("```", "").strip())
+
+        # --- NOVA VALIDAÇÃO ROBUSTA DA RESPOSTA ---
+        if not result_json.get('candidates'):
+            finish_reason = result_json.get('promptFeedback', {}).get('blockReason')
+            if finish_reason:
+                app.logger.error(f"Requisição bloqueada pela API do Gemini. Motivo: {finish_reason}")
+                return jsonify({"error": f"A análise foi bloqueada por segurança. Motivo: {finish_reason}"}), 400
+            raise ValueError("Resposta da API Gemini inválida: sem 'candidates'.")
+        
+        candidate = result_json['candidates'][0]
+        
+        if not candidate.get('content') or not candidate['content'].get('parts'):
+            finish_reason = candidate.get('finishReason')
+            app.logger.error(f"A API do Gemini não retornou conteúdo. Motivo do término: {finish_reason}")
+            return jsonify({"error": f"A IA não conseguiu processar a imagem. Motivo: {finish_reason}"}), 500
+
+        result_text = candidate['content']['parts'][0]['text']
+        
+        try:
+            cleaned_result = result_text.replace("```json", "").replace("```", "").strip()
+            if not cleaned_result:
+                raise ValueError("A IA retornou uma string vazia após a limpeza.")
+            final_json = json.loads(cleaned_result)
+        except (json.JSONDecodeError, ValueError) as json_error:
+            app.logger.error(f"Erro ao decodificar o JSON da IA: {json_error}")
+            app.logger.error(f"Texto problemático recebido: {result_text}")
+            return jsonify({"error": "A IA retornou uma resposta em formato inesperado. Tente novamente ou com outra imagem."}), 500
         
         return jsonify(final_json)
 
+    except requests.exceptions.HTTPError as e:
+        error_text = e.response.text
+        app.logger.error(f"Erro HTTP da API externa: {e.response.status_code} - {error_text}")
+        return jsonify({"error": f"Erro na API Gemini: {e.response.status_code}. Detalhes: {error_text}"}), e.response.status_code
     except Exception as e:
         app.logger.error(f"Erro em /api/analyze: {e}")
-        return jsonify({"error": "Ocorreu um erro interno durante a análise."}), 500
+        return jsonify({"error": f"Ocorreu um erro interno durante a análise: {e}"}), 500
 
-# --- ROTA PARA GERAÇÃO DE IMAGEM (ATUALIZADA) ---
+# --- ROTA PARA GERAÇÃO DE IMAGEM ---
 @app.route('/api/generate-image', methods=['POST'])
 def generate_image_endpoint():
     app.logger.info(">>> Rota /api/generate-image acessada <<<")
     try:
-        api_key = os.environ.get("A4F_API_KEY") # Usando a chave correta
+        api_key = os.environ.get("A4F_API_KEY") 
         if not api_key:
-            app.logger.error("Chave de API (A4F_API_KEY) não encontrada no servidor.")
             return jsonify({"error": "Chave da API de geração de imagem não configurada."}), 500
 
         data = request.json
@@ -68,19 +95,8 @@ def generate_image_endpoint():
         if not prompt:
             return jsonify({"error": "Prompt não fornecido."}), 400
 
-        app.logger.info(f"Iniciando geração de imagem com A4F.co (DALL-E 3).")
-        
-        headers = {
-            "Authorization": f"Bearer {api_key}",
-            "Content-Type": "application/json"
-        }
-        
-        payload = {
-            "model": "dall-e-3",
-            "prompt": prompt,
-            "n": 1,
-            "size": "1792x1024"
-        }
+        headers = {"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"}
+        payload = {"model": "dall-e-3", "prompt": prompt, "n": 1, "size": "1792x1024"}
         
         response = requests.post("https://api.a4f.co/v1/images/generations", headers=headers, json=payload)
         response.raise_for_status()
@@ -92,7 +108,6 @@ def generate_image_endpoint():
 
     except requests.exceptions.HTTPError as e:
         error_text = e.response.text
-        app.logger.error(f"Erro HTTP da API de imagem: {e.response.status_code} - {error_text}")
         return jsonify({"error": f"Erro na API de geração de imagem: {e.response.status_code}. Detalhes: {error_text}"}), e.response.status_code
     except Exception as e:
         app.logger.error(f"Erro em /api/generate-image: {e}")
@@ -103,7 +118,6 @@ def health_check():
     return "Backend do AnalisaThumb (Gemini + A4F) está no ar!"
 
 def create_analysis_prompt(title, niche, language):
-    # O prompt de análise permanece o mesmo
     return f"""
       Você é o AnalisaThumb, um especialista de classe mundial...
       ...
