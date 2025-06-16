@@ -81,73 +81,21 @@ def analyze_endpoint():
         app.logger.error(f"Erro em /api/analyze: {e}")
         return jsonify({"error": f"Ocorreu um erro interno durante a análise: {e}"}), 500
 
-# --- ROTA PARA GERAÇÃO DE IMAGEM ---
-@app.route('/api/generate-image', methods=['POST'])
-def generate_image_endpoint():
-    app.logger.info(">>> Rota /api/generate-image acessada <<<")
-    try:
-        api_key = os.environ.get("A4F_API_KEY") 
-        if not api_key:
-            app.logger.error("Chave de API (A4F_API_KEY) não encontrada no servidor.")
-            return jsonify({"error": "Chave da API de geração de imagem não configurada."}), 500
-
-        data = request.json
-        prompt = data.get('prompt')
-        if not prompt:
-            return jsonify({"error": "Prompt não fornecido."}), 400
-
-        app.logger.info(f"Iniciando geração de imagem com A4F.co (FLUX.1-schnell).")
-        
-        headers = {
-            "Authorization": f"Bearer {api_key}",
-            "Content-Type": "application/json"
-        }
-        
-        payload = {
-            "model": "provider-3/FLUX.1-schnell",
-            "prompt": prompt,
-            "n": 1,
-            "size": "1024x1024"
-        }
-        
-        response = requests.post("https://api.a4f.co/v1/images/generations", headers=headers, json=payload)
-        app.logger.info(f"Resposta da API A4F.co (status {response.status_code})")
-        response.raise_for_status()
-        
-        result_data = response.json()
-        
-        image_url = result_data.get('data', [{}])[0].get('url')
-        if not image_url:
-            app.logger.error(f"Resposta da API de imagem não continha uma URL. Recebido: {result_data}")
-            raise ValueError("A resposta da API de imagem não continha uma URL.")
-            
-        return jsonify({"generated_image_url": image_url})
-
-    except requests.exceptions.HTTPError as e:
-        error_text = e.response.text
-        app.logger.error(f"Erro HTTP da API de imagem: {e.response.status_code} - {error_text}")
-        return jsonify({"error": f"Erro na API de geração de imagem: {e.response.status_code}. Detalhes: {error_text}"}), e.response.status_code
-    except Exception as e:
-        app.logger.error(f"Erro em /api/generate-image: {e}")
-        return jsonify({"error": "Ocorreu um erro interno durante a geração da imagem."}), 500
-
-
 @app.route('/')
 def health_check():
-    return "Backend do AnalisaThumb (Gemini + A4F) está no ar!"
+    return "Backend do AnalisaThumb (Análise) está no ar!"
 
-# --- FUNÇÕES DE PROMPT RESTAURADAS ---
 def create_single_analysis_prompt(title, niche, language):
     """
-    Cria um prompt muito mais explícito para garantir o formato correto da resposta.
+    Cria um prompt detalhado para análise única, incluindo tendências e paleta.
     """
     return f"""
-      Sua única tarefa é analisar a imagem e o contexto fornecidos e retornar um objeto JSON. Não inclua NENHUMA palavra, explicação ou texto antes ou depois do objeto JSON. A sua resposta deve começar com `{{` e terminar com `}}`.
+      Você é o AnalisaThumb, um especialista de classe mundial em otimização de thumbnails e títulos do YouTube. Sua tarefa é analisar a imagem e o contexto fornecidos e retornar um objeto JSON. Não inclua NENHUMA palavra ou explicação antes ou depois do objeto JSON. Sua resposta deve começar com `{{` e terminar com `}}`.
 
       **Contexto:**
       - Título: "{title or 'Não fornecido'}"
       - Nicho: "{niche}"
-      - Idioma da Resposta: {language}
+      - Idioma para a Resposta: {language}
 
       **Formato de Saída OBRIGATÓRIO:**
       ```json
@@ -161,13 +109,21 @@ def create_single_analysis_prompt(title, niche, language):
           {{"name": "Relevância (Contexto)", "score": 0-100}}
         ],
         "recommendations": [
-          "Recomendação 1",
-          "Recomendação 2"
-        ]
+          "Recomendação 1 sobre fontes, cores ou layout.",
+          "Recomendação 2 sobre emoção ou clareza."
+        ],
+        "suggested_titles": [
+          "Primeira sugestão de título.",
+          "Segunda sugestão de título."
+        ],
+        "trend_analysis": "Análise curta sobre como esta thumbnail se alinha com as tendências atuais do nicho.",
+        "color_palette": ["#C0392B", "#F1C40F", "#2980B9", "#ECF0F1"]
       }}
       ```
       **Instruções para Recomendações:**
-      - Se a pontuação de "Foco e Composição" for menor que 75, você DEVE incluir uma recomendação que comece com "Sugestão de Prompt:". O prompt deve ser em inglês.
+      - Se a pontuação de 'Legibilidade do Texto' for baixa, você DEVE sugerir uma fonte específica de alto impacto (Ex: 'Impact', 'Anton') E uma combinação de cores.
+      - Se a pontuação de 'Foco e Composição' for baixa, você DEVE sugerir uma mudança de layout clara (Ex: 'Posicione o rosto na direita e o texto na esquerda.').
+      - Se a pontuação de "Foco e Composição" for menor que 75, inclua uma recomendação que comece com "Sugestão de Prompt:". O prompt deve ser em inglês.
     """
 
 def create_comparison_prompt(title, niche, language):
@@ -175,9 +131,8 @@ def create_comparison_prompt(title, niche, language):
     return f"""
       Você é o AnalisaThumb, um especialista em otimização de thumbnails.
       **Contexto:** Título: "{title or 'Não fornecido'}", Nicho: "{niche}", Idioma: {language}.
-      **Tarefa:** Analise a Imagem A (primeira) e a Imagem B (segunda). Retorne um JSON com "analysis_type" como "comparison", contendo "version_a" e "version_b", cada um com um array "details" de 5 objetos (com "name" e "score"). Inclua também um objeto "comparison_result" com "winner" e "justification".
+      **Tarefa:** Analise a Imagem A (primeira) e a Imagem B (segunda). Retorne um JSON com "analysis_type" como "comparison". O JSON deve conter "version_a" e "version_b", cada um com um array "details" de 5 objetos (com "name" e "score"). Inclua também um objeto "comparison_result" com "winner" e "justification".
     """
-# --- FIM DAS FUNÇÕES RESTAURADAS ---
 
 if __name__ == '__main__':
     app.run(port=os.environ.get("PORT", 5000))

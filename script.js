@@ -52,7 +52,6 @@ function setupEventListeners() {
 
 function toggleComparisonMode() {
     isComparisonMode = DOMElements.abToggle.checked;
-
     DOMElements.uploaderB.classList.toggle('hidden', !isComparisonMode);
     
     if (isComparisonMode) {
@@ -206,6 +205,7 @@ function copyToClipboard(element, text) {
 function createSingleResultHTML(data) {
     const details = data.details && Array.isArray(data.details) ? data.details : [];
     const recommendations = data.recommendations && Array.isArray(data.recommendations) ? data.recommendations : [];
+    const suggested_titles = data.suggested_titles && Array.isArray(data.suggested_titles) ? data.suggested_titles : [];
     const color_palette = data.color_palette && Array.isArray(data.color_palette) ? data.color_palette : [];
     const trend_analysis = data.trend_analysis || "";
     
@@ -242,6 +242,12 @@ function createSingleResultHTML(data) {
         return `<li class="flex items-start">${icon}<div class="flex-grow"><span>${rec}</span></div><button class="ml-2 p-1 text-gray-400 hover:text-white copy-btn flex-shrink-0" onclick="copyToClipboard(this, \`${textToCopy.replace(/`/g, '\\`')}\`)"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg></button></li>`;
     }).join('');
     
+    const titlesHTML = suggested_titles.map(title => `
+        <li class="flex items-center justify-between p-2 bg-gray-800/50 rounded-md">
+            <div class="flex items-center mr-2"><svg class="w-5 h-5 mr-3 text-indigo-400 flex-shrink-0" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" /></svg><span>${title}</span></div>
+            <button class="ml-2 p-1 text-gray-400 hover:text-white copy-btn flex-shrink-0" onclick="copyToClipboard(this, \`${title.replace(/`/g, '\\`')}\`)"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg></button>
+        </li>`).join('');
+    
     const paletteHTML = color_palette.map(color => `
         <div class="text-center cursor-pointer" onclick="copyToClipboard(this.querySelector('p'), '${color}')">
             <div class="w-16 h-16 rounded-lg border-2 border-gray-600 shadow-md" style="background-color: ${color};"></div>
@@ -251,19 +257,20 @@ function createSingleResultHTML(data) {
     let promptHTML = '';
     if (promptSuggestion) {
         promptHTML = `
-            <div id="prompt-suggestion-section" class="mt-6 bg-gray-900/50 p-6 rounded-xl border border-gray-700">
+            <div class="mt-6 bg-gray-900/50 p-6 rounded-xl border border-gray-700">
                 <h3 class="text-xl font-bold mb-4">Prompt Sugerido para IA</h3>
                 <div class="prompt-suggestion p-4 rounded-md mb-4 flex items-center justify-between">
                     <span class="flex-grow">${promptSuggestion}</span>
                     <button class="ml-4 p-1 text-gray-400 hover:text-white copy-btn flex-shrink-0" onclick="copyToClipboard(this, \`${promptSuggestion.replace(/`/g, '\\`')}\`)"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg></button>
                 </div>
-                <button id="generate-image-btn" class="mt-4 w-full bg-blue-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-500 transition-all" onclick="generateImage('${promptSuggestion.replace(/'/g, "\\'")}')">
+                <button class="mt-4 w-full bg-blue-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-500 transition-all" onclick="generateImage('${promptSuggestion.replace(/'/g, "\\'")}')">
                     Gerar Imagem com este Prompt
                 </button>
             </div>`;
     }
 
     const trendHTML = trend_analysis ? `<div class="mt-6 bg-gray-900/50 p-6 rounded-xl border border-gray-700"><h3 class="text-xl font-bold mb-4">Análise de Tendências do Nicho</h3><p class="text-gray-300">${trend_analysis}</p></div>` : '';
+    const suggestedTitlesHTML = suggested_titles.length > 0 ? `<div class="mt-6 bg-gray-900/50 p-6 rounded-xl border border-gray-700"><h3 class="text-xl font-bold mb-4">Sugestões de Títulos Otimizados</h3><ul class="space-y-3">${titlesHTML}</ul></div>` : '';
     const colorPaletteHTML = color_palette.length > 0 ? `<div class="mt-6 bg-gray-900/50 p-6 rounded-xl border border-gray-700"><h3 class="text-xl font-bold mb-4">Paleta de Cores Sugerida</h3><div id="color-palette-container" class="flex justify-center gap-4">${paletteHTML}</div></div>` : '';
 
     return `
@@ -280,6 +287,7 @@ function createSingleResultHTML(data) {
         </div>
         ${promptHTML}
         ${trendHTML}
+        ${suggestedTitlesHTML}
         ${colorPaletteHTML}
         <div id="generated-image-section" class="hidden mt-6 bg-gray-900/50 p-6 rounded-xl border border-gray-700 text-center"><h3 class="text-xl font-bold mb-4">Nova Thumbnail Gerada com IA</h3><div id="generated-image-container" class="flex justify-center items-center min-h-[200px]"></div></div>
         <div class="mt-8 flex justify-center"><button id="restart-button-results" class="bg-gray-600 text-white font-bold py-3 px-10 rounded-lg hover:bg-gray-500">Analisar Outra</button></div>
@@ -332,10 +340,7 @@ async function generateImage(prompt) {
     }
     
     genSection.classList.remove('hidden');
-    genContainer.innerHTML = `<div role="status">
-                                <svg class="inline w-8 h-8 text-gray-600 animate-spin fill-blue-500" viewBox="0 0 100 101" ...></svg>
-                                <span class="ml-2">Gerando imagem...</span>
-                             </div>`;
+    genContainer.innerHTML = `<div role="status">...</div>`;
 
     try {
         const response = await fetch('https://analisathumb.onrender.com/api/generate-image', {
@@ -350,7 +355,7 @@ async function generateImage(prompt) {
         }
 
         const result = await response.json();
-        const imageUrl = `data:image/png;base64,${result.generated_image_b64}`;
+        const imageUrl = result.generated_image_url;
         genContainer.innerHTML = `<img src="${imageUrl}" class="rounded-lg shadow-lg max-w-md w-full" alt="Imagem gerada por IA">`;
 
     } catch (error) {
