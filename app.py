@@ -87,7 +87,7 @@ def generate_image_endpoint():
         if not prompt:
             return jsonify({"error": "Prompt não fornecido."}), 400
 
-        app.logger.info(f"Iniciando geração de imagem com A4F.co (GPT-Image-1).")
+        app.logger.info(f"Iniciando geração de imagem com A4F.co (provider-5/gpt-image-1).")
         
         headers = {
             "Authorization": f"Bearer {api_key}",
@@ -101,7 +101,7 @@ def generate_image_endpoint():
             "size": "1792x1024"
         }
         
-        # --- CORREÇÃO: URL do endpoint da A4F.co corrigida ---
+        # --- CORREÇÃO FINAL: URL do endpoint da A4F.co corrigida ---
         response = requests.post("https://api.a4f.co/v1/images/generations", headers=headers, json=payload)
         app.logger.info(f"Resposta da API A4F.co (status {response.status_code})")
         response.raise_for_status()
