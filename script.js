@@ -53,32 +53,19 @@ function setupEventListeners() {
 
 function toggleComparisonMode() {
     isComparisonMode = DOMElements.abToggle.checked;
-
     DOMElements.uploaderB.classList.toggle('hidden', !isComparisonMode);
-    
-    // Altera o grid de preview apenas quando necessário
-    if (isComparisonMode) {
-        DOMElements.previewArea.classList.remove('md:grid-cols-1');
-        DOMElements.previewArea.classList.add('md:grid-cols-2');
-    } else {
-        DOMElements.previewArea.classList.remove('md:grid-cols-2');
-        DOMElements.previewArea.classList.add('md:grid-cols-1');
-    }
-    
+    DOMElements.previewArea.classList.toggle('md:grid-cols-2', isComparisonMode);
     DOMElements.labelVersionA.textContent = isComparisonMode ? 'Versão A' : 'Thumbnail Principal';
-    
     resetInputs();
 }
 
 function handleImageUpload(event, version) {
     const file = event.target.files[0];
     if (!file) return;
-
     if (file.size > 5 * 1024 * 1024) { 
         alert("Imagem muito grande (MAX. 5MB).");
         return;
     }
-
     const reader = new FileReader();
     reader.onload = e => {
         DOMElements.contextInputsContainer.classList.remove('hidden');
@@ -112,7 +99,7 @@ function resetInputs() {
     DOMElements.previewA.src = '';
     DOMElements.previewB.src = '';
     DOMElements.previewA.classList.add('hidden');
-    DOMElements.previewB.classList.add('hidden');
+    if(DOMElements.previewB) DOMElements.previewB.classList.add('hidden');
     DOMElements.contextInputsContainer.classList.add('hidden');
     DOMElements.analyzeButton.disabled = true;
 }
@@ -156,7 +143,7 @@ function displayResults(results) {
     DOMElements.loadingSpinner.classList.add('hidden');
     const resultsContainer = DOMElements.resultsSection;
     resultsContainer.classList.remove('hidden');
-    resultsContainer.innerHTML = ''; // Limpa resultados anteriores
+    resultsContainer.innerHTML = '';
 
     if (results.analysis_type === 'single') {
         resultsContainer.innerHTML = createSingleResultHTML(results);
@@ -197,7 +184,9 @@ function copyToClipboard(element, text) {
 function createSingleResultHTML(data) {
     const details = data.details && Array.isArray(data.details) ? data.details : [];
     const recommendations = data.recommendations && Array.isArray(data.recommendations) ? data.recommendations : [];
-    
+    const suggested_titles = data.suggested_titles && Array.isArray(data.suggested_titles) ? data.suggested_titles : [];
+    const color_palette = data.color_palette && Array.isArray(data.color_palette) ? data.color_palette : [];
+
     const finalScore = details.length > 0 ? Math.round(details.reduce((acc, item) => acc + (item.score || 0), 0) / details.length) : 0;
     
     setTimeout(() => {
@@ -220,11 +209,29 @@ function createSingleResultHTML(data) {
         const isPrompt = rec.startsWith('Sugestão de Prompt:');
         const textToCopy = isPrompt ? rec.substring(18).trim() : rec;
         
+        const generateBtnHTML = isPrompt 
+            ? `<button class="ml-2 p-1 text-blue-400 hover:text-white" title="Gerar Imagem com este Prompt" onclick="generateImage('${textToCopy.replace(/'/g, "\\'")}')"><svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path d="M17.414 2.586a2 2 0 00-2.828 0L7 10.172V13h2.828l7.586-7.586a2 2 0 000-2.828zM5 12V7a2 2 0 012-2h2.586l-2.5 2.5L5 12zM3 16a2 2 0 012-2h10a2 2 0 012 2v2a2 2 0 01-2-2H5a2 2 0 01-2-2v-2z"></path></svg></button>`
+            : '';
+
         const content = isPrompt ? `<div class="prompt-suggestion">${textToCopy}</div>` : `<span>${rec}</span>`;
         const icon = !isPrompt ? '<svg class="w-5 h-5 mr-3 text-indigo-400 flex-shrink-0 mt-0.5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 15-5-5 1.41-1.41L11 14.17l7.59-7.59L20 8l-9 9z"></path></svg>' : '';
         
-        return `<li class="flex items-start">${icon}<div class="flex-grow">${content}</div><button class="ml-2 p-1 text-gray-400 hover:text-white copy-btn flex-shrink-0" onclick="copyToClipboard(this, \`${textToCopy.replace(/`/g, '\\`')}\`)"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg></button></li>`;
+        return `<li class="flex items-start">${icon}<div class="flex-grow">${content}</div><div class="flex items-center flex-shrink-0">${generateBtnHTML}<button class="ml-2 p-1 text-gray-400 hover:text-white copy-btn" onclick="copyToClipboard(this, \`${textToCopy.replace(/`/g, '\\`')}\`)"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg></button></div></li>`;
     }).join('');
+    
+    const titlesHTML = suggested_titles.map(title => `
+        <li class="flex items-center justify-between p-2 bg-gray-800/50 rounded-md">
+            <div class="flex items-center mr-2"><svg class="w-5 h-5 mr-3 text-indigo-400 flex-shrink-0" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" /></svg><span>${title}</span></div>
+            <button class="ml-2 p-1 text-gray-400 hover:text-white copy-btn flex-shrink-0" onclick="copyToClipboard(this, \`${title.replace(/`/g, '\\`')}\`)"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg></button>
+        </li>`).join('');
+    
+    const paletteHTML = color_palette.map(color => `
+        <div class="text-center cursor-pointer" onclick="copyToClipboard(this.querySelector('p'), '${color}')">
+            <div class="w-16 h-16 rounded-lg border-2 border-gray-600 shadow-md" style="background-color: ${color};"></div>
+            <p class="text-sm font-mono mt-2 text-gray-400">${color}</p>
+        </div>`).join('');
+
+    const trendHTML = data.trend_analysis ? `<div class="mt-6 bg-gray-900/50 p-6 rounded-xl border border-gray-700"><h3 class="text-xl font-bold mb-4">Análise de Tendências do Nicho</h3><p class="text-gray-300">${data.trend_analysis}</p></div>` : '';
 
     return `
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 md:gap-8">
@@ -238,6 +245,10 @@ function createSingleResultHTML(data) {
                 <div class="bg-gray-900/50 p-6 rounded-xl border border-gray-700"><h3 class="text-xl font-bold mb-4">Recomendações para Melhorar</h3><ul class="space-y-3 h-48 overflow-y-auto pr-2 recommendations-list">${recommendationsHTML}</ul></div>
             </div>
         </div>
+        ${trendHTML}
+        <div class="mt-6 bg-gray-900/50 p-6 rounded-xl border border-gray-700"><h3 class="text-xl font-bold mb-4">Sugestões de Títulos Otimizados</h3><ul class="space-y-3 titles-list">${titlesHTML}</ul></div>
+        <div class="mt-6 bg-gray-900/50 p-6 rounded-xl border border-gray-700"><h3 class="text-xl font-bold mb-4">Paleta de Cores Sugerida</h3><div id="color-palette-container" class="flex justify-center gap-4">${paletteHTML}</div></div>
+        <div id="generated-image-section" class="hidden mt-6 bg-gray-900/50 p-6 rounded-xl border border-gray-700 text-center"><h3 class="text-xl font-bold mb-4">Nova Thumbnail Gerada com IA</h3><div id="generated-image-container" class="flex justify-center items-center min-h-[200px]"></div></div>
         <div class="mt-8 flex justify-center"><button id="restart-button-results" class="bg-gray-600 text-white font-bold py-3 px-10 rounded-lg hover:bg-gray-500">Analisar Outra</button></div>
     `;
 }
@@ -278,8 +289,48 @@ function createComparisonResultHTML(data) {
     `;
 }
 
+async function generateImage(prompt) {
+    const genSection = document.getElementById('generated-image-section');
+    const genContainer = document.getElementById('generated-image-container');
+    
+    if (!genSection || !genContainer) {
+        console.error("Elementos para geração de imagem não encontrados!");
+        return;
+    }
+    
+    genSection.classList.remove('hidden');
+    genContainer.innerHTML = `<div role="status">
+                                <svg class="inline w-8 h-8 text-gray-600 animate-spin fill-blue-500" viewBox="0 0 100 101" ...></svg>
+                                <span class="ml-2">Gerando imagem...</span>
+                             </div>`;
+
+    try {
+        const response = await fetch('https://analisathumb.onrender.com/api/generate-image', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ prompt: prompt })
+        });
+
+        if (!response.ok) {
+            const errorResult = await response.json();
+            throw new Error(errorResult.error || `Erro do servidor (${response.status})`);
+        }
+
+        const result = await response.json();
+        const imageUrl = `data:image/png;base64,${result.generated_image_b64}`;
+        genContainer.innerHTML = `<img src="${imageUrl}" class="rounded-lg shadow-lg max-w-md w-full" alt="Imagem gerada por IA">`;
+
+    } catch (error) {
+        genContainer.innerHTML = `<p class="text-red-400">Falha ao gerar a imagem: ${error.message}</p>`;
+    }
+}
+
 function resetApp() {
     DOMElements.resultsSection.classList.add('hidden');
+    
+    const genSection = document.getElementById('generated-image-section');
+    if(genSection) genSection.classList.add('hidden');
+    
     DOMElements.inputSection.classList.remove('hidden');
     resetInputs();
 }
