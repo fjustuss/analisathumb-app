@@ -53,19 +53,23 @@ function setupEventListeners() {
 
 function toggleComparisonMode() {
     isComparisonMode = DOMElements.abToggle.checked;
+
     DOMElements.uploaderB.classList.toggle('hidden', !isComparisonMode);
     DOMElements.previewArea.classList.toggle('md:grid-cols-2', isComparisonMode);
     DOMElements.labelVersionA.textContent = isComparisonMode ? 'Versão A' : 'Thumbnail Principal';
+    
     resetInputs();
 }
 
 function handleImageUpload(event, version) {
     const file = event.target.files[0];
     if (!file) return;
+
     if (file.size > 5 * 1024 * 1024) { 
         alert("Imagem muito grande (MAX. 5MB).");
         return;
     }
+
     const reader = new FileReader();
     reader.onload = e => {
         DOMElements.contextInputsContainer.classList.remove('hidden');
@@ -182,10 +186,12 @@ function copyToClipboard(element, text) {
 }
 
 function createSingleResultHTML(data) {
+    // --- CORREÇÃO: VERIFICAÇÃO DE DADOS ANTES DE USAR ---
     const details = data.details && Array.isArray(data.details) ? data.details : [];
     const recommendations = data.recommendations && Array.isArray(data.recommendations) ? data.recommendations : [];
     const suggested_titles = data.suggested_titles && Array.isArray(data.suggested_titles) ? data.suggested_titles : [];
     const color_palette = data.color_palette && Array.isArray(data.color_palette) ? data.color_palette : [];
+    const trend_analysis = data.trend_analysis || "";
 
     const finalScore = details.length > 0 ? Math.round(details.reduce((acc, item) => acc + (item.score || 0), 0) / details.length) : 0;
     
@@ -231,7 +237,9 @@ function createSingleResultHTML(data) {
             <p class="text-sm font-mono mt-2 text-gray-400">${color}</p>
         </div>`).join('');
 
-    const trendHTML = data.trend_analysis ? `<div class="mt-6 bg-gray-900/50 p-6 rounded-xl border border-gray-700"><h3 class="text-xl font-bold mb-4">Análise de Tendências do Nicho</h3><p class="text-gray-300">${data.trend_analysis}</p></div>` : '';
+    const trendHTML = trend_analysis ? `<div class="mt-6 bg-gray-900/50 p-6 rounded-xl border border-gray-700"><h3 class="text-xl font-bold mb-4">Análise de Tendências do Nicho</h3><p class="text-gray-300">${trend_analysis}</p></div>` : '';
+    const suggestedTitlesHTML = titlesHTML ? `<div class="mt-6 bg-gray-900/50 p-6 rounded-xl border border-gray-700"><h3 class="text-xl font-bold mb-4">Sugestões de Títulos Otimizados</h3><ul class="space-y-3 titles-list">${titlesHTML}</ul></div>` : '';
+    const colorPaletteHTML = paletteHTML ? `<div class="mt-6 bg-gray-900/50 p-6 rounded-xl border border-gray-700"><h3 class="text-xl font-bold mb-4">Paleta de Cores Sugerida</h3><div id="color-palette-container" class="flex justify-center gap-4">${paletteHTML}</div></div>` : '';
 
     return `
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 md:gap-8">
@@ -246,8 +254,8 @@ function createSingleResultHTML(data) {
             </div>
         </div>
         ${trendHTML}
-        <div class="mt-6 bg-gray-900/50 p-6 rounded-xl border border-gray-700"><h3 class="text-xl font-bold mb-4">Sugestões de Títulos Otimizados</h3><ul class="space-y-3 titles-list">${titlesHTML}</ul></div>
-        <div class="mt-6 bg-gray-900/50 p-6 rounded-xl border border-gray-700"><h3 class="text-xl font-bold mb-4">Paleta de Cores Sugerida</h3><div id="color-palette-container" class="flex justify-center gap-4">${paletteHTML}</div></div>
+        ${suggestedTitlesHTML}
+        ${colorPaletteHTML}
         <div id="generated-image-section" class="hidden mt-6 bg-gray-900/50 p-6 rounded-xl border border-gray-700 text-center"><h3 class="text-xl font-bold mb-4">Nova Thumbnail Gerada com IA</h3><div id="generated-image-container" class="flex justify-center items-center min-h-[200px]"></div></div>
         <div class="mt-8 flex justify-center"><button id="restart-button-results" class="bg-gray-600 text-white font-bold py-3 px-10 rounded-lg hover:bg-gray-500">Analisar Outra</button></div>
     `;
@@ -299,10 +307,7 @@ async function generateImage(prompt) {
     }
     
     genSection.classList.remove('hidden');
-    genContainer.innerHTML = `<div role="status">
-                                <svg class="inline w-8 h-8 text-gray-600 animate-spin fill-blue-500" viewBox="0 0 100 101" ...></svg>
-                                <span class="ml-2">Gerando imagem...</span>
-                             </div>`;
+    genContainer.innerHTML = `<div role="status">...</div>`;
 
     try {
         const response = await fetch('https://analisathumb.onrender.com/api/generate-image', {
