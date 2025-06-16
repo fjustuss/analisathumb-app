@@ -1,5 +1,5 @@
 // ===================================================================================
-// ANALISATHUMB - JAVASCRIPT PRINCIPAL (VERSÃO FINAL COMPLETA)
+// ANALISATHUMB - JAVASCRIPT PRINCIPAL
 // ===================================================================================
 
 // --- 1. SELETORES DE ELEMENTOS DO DOM ---
@@ -246,11 +246,8 @@ function createSingleResultHTML(data) {
         promptHTML = `
             <div class="mt-6 bg-gray-900/50 p-6 rounded-xl border border-gray-700">
                 <h3 class="text-xl font-bold mb-4">Prompt Sugerido para IA</h3>
-                <div class="prompt-suggestion p-4 rounded-md mb-4 flex items-center justify-between">
-                    <span class="flex-grow">${promptSuggestion}</span>
-                    <button class="ml-4 p-1 text-gray-400 hover:text-white copy-btn flex-shrink-0" onclick="copyToClipboard(this, \`${promptSuggestion.replace(/`/g, '\\`')}\`)"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg></button>
-                </div>
-                <button class="mt-4 w-full bg-blue-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-500 transition-all" onclick="generateImage('${promptSuggestion.replace(/'/g, "\\'")}')">
+                <div class="prompt-suggestion p-4 rounded-md mb-4">${promptSuggestion}</div>
+                <button class="w-full bg-blue-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-500 transition-all" onclick="generateImage('${promptSuggestion.replace(/'/g, "\\'")}')">
                     Gerar Imagem com este Prompt
                 </button>
             </div>`;
