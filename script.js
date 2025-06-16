@@ -192,8 +192,15 @@ function copyToClipboard(element, text) {
     document.body.removeChild(textarea);
 
     const originalContent = element.innerHTML;
-    element.innerHTML = '<svg class="w-4 h-4 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>';
-    setTimeout(() => { element.innerHTML = originalContent; }, 1500);
+    const isColorElement = element.tagName === 'P';
+
+    if (isColorElement) {
+        element.textContent = 'Copiado!';
+        setTimeout(() => { element.textContent = text; }, 1500);
+    } else {
+        element.innerHTML = '<svg class="w-4 h-4 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>';
+        setTimeout(() => { element.innerHTML = originalContent; }, 1500);
+    }
 }
 
 function createSingleResultHTML(data) {
@@ -244,10 +251,13 @@ function createSingleResultHTML(data) {
     let promptHTML = '';
     if (promptSuggestion) {
         promptHTML = `
-            <div class="mt-6 bg-gray-900/50 p-6 rounded-xl border border-gray-700">
+            <div id="prompt-suggestion-section" class="mt-6 bg-gray-900/50 p-6 rounded-xl border border-gray-700">
                 <h3 class="text-xl font-bold mb-4">Prompt Sugerido para IA</h3>
-                <div class="prompt-suggestion p-4 rounded-md mb-4">${promptSuggestion}</div>
-                <button class="w-full bg-blue-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-500 transition-all" onclick="generateImage('${promptSuggestion.replace(/'/g, "\\'")}')">
+                <div class="prompt-suggestion p-4 rounded-md mb-4 flex items-center justify-between">
+                    <span class="flex-grow">${promptSuggestion}</span>
+                    <button class="ml-4 p-1 text-gray-400 hover:text-white copy-btn flex-shrink-0" onclick="copyToClipboard(this, \`${promptSuggestion.replace(/`/g, '\\`')}\`)"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg></button>
+                </div>
+                <button id="generate-image-btn" class="mt-4 w-full bg-blue-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-500 transition-all" onclick="generateImage('${promptSuggestion.replace(/'/g, "\\'")}')">
                     Gerar Imagem com este Prompt
                 </button>
             </div>`;
@@ -268,8 +278,8 @@ function createSingleResultHTML(data) {
                 <div class="bg-gray-900/50 p-6 rounded-xl border border-gray-700"><h3 class="text-xl font-bold mb-4">Recomendações para Melhorar</h3><ul class="space-y-3 h-48 overflow-y-auto pr-2 recommendations-list">${recommendationsHTML}</ul></div>
             </div>
         </div>
-        ${trendHTML}
         ${promptHTML}
+        ${trendHTML}
         ${colorPaletteHTML}
         <div id="generated-image-section" class="hidden mt-6 bg-gray-900/50 p-6 rounded-xl border border-gray-700 text-center"><h3 class="text-xl font-bold mb-4">Nova Thumbnail Gerada com IA</h3><div id="generated-image-container" class="flex justify-center items-center min-h-[200px]"></div></div>
         <div class="mt-8 flex justify-center"><button id="restart-button-results" class="bg-gray-600 text-white font-bold py-3 px-10 rounded-lg hover:bg-gray-500">Analisar Outra</button></div>
