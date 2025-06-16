@@ -8,7 +8,22 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="style.css">
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        .gradient-text { background: linear-gradient(90deg, #4f46e5, #ec4899); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .score-circle { transition: stroke-dashoffset 0.8s ease-out; }
+        .progress-bar-fill { transition: width 0.8s ease-out; }
+        .tab-active { border-color: #4f46e5; color: #4f46e5; background-color: rgba(79, 70, 229, 0.1); }
+        .tab-inactive { border-color: #4b5563; color: #d1d5db; }
+        .recommendations-list::-webkit-scrollbar, .titles-list::-webkit-scrollbar { width: 8px; }
+        .recommendations-list::-webkit-scrollbar-track, .titles-list::-webkit-scrollbar-track { background: #1f2937; }
+        .recommendations-list::-webkit-scrollbar-thumb, .titles-list::-webkit-scrollbar-thumb { background-color: #4f46e5; border-radius: 20px; border: 3px solid #1f2937; }
+        .prompt-suggestion { background-color: rgba(79, 70, 229, 0.1); border-left: 4px solid #4f46e5; padding: 10px; border-radius: 4px; font-family: monospace; font-size: 0.9em; color: #e5e7eb; }
+        /* Toggle Switch Styles */
+        .toggle-bg:after { content: ''; @apply absolute top-0.5 left-0.5 bg-white border border-gray-300 rounded-full h-5 w-5 transition-transform shadow-sm; }
+        input:checked + .toggle-bg:after { @apply transform translate-x-full; }
+        input:checked + .toggle-bg { @apply bg-indigo-600 border-indigo-600; }
+    </style>
 </head>
 <body class="bg-gray-900 text-gray-200 min-h-screen flex flex-col items-center justify-center p-4">
 
@@ -20,6 +35,7 @@
 
         <div id="app-container" class="bg-gray-800/50 backdrop-blur-sm p-6 md:p-8 rounded-2xl shadow-2xl border border-gray-700">
             <div id="input-section">
+                <!-- Toggle A/B Test -->
                 <div class="flex items-center justify-center mb-6">
                     <label for="ab-test-toggle" class="flex items-center cursor-pointer">
                         <span class="mr-3 text-sm font-medium text-gray-300">Análise Simples</span>
@@ -31,6 +47,7 @@
                     </label>
                 </div>
 
+                <!-- Container para Uploaders -->
                 <div id="upload-container">
                     <div id="upload-grid-container" class="grid grid-cols-1 md:grid-cols-1 gap-4">
                         <div>
@@ -57,10 +74,12 @@
                 </div>
                 
                 <div id="context-inputs-container" class="hidden mt-6 space-y-4">
+                    <!-- Preview Area -->
                     <div id="preview-area" class="grid grid-cols-1 md:grid-cols-1 gap-4 place-items-center">
                         <img id="image-preview-a" class="hidden w-full max-w-xs mx-auto rounded-lg shadow-lg border-2 border-gray-700">
                         <img id="image-preview-b" class="hidden w-full max-w-xs mx-auto rounded-lg shadow-lg border-2 border-gray-700">
                     </div>
+                    <!-- Context Fields -->
                     <div class="max-w-md mx-auto grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div class="text-left">
                             <label for="language-select" class="block mb-2 text-sm font-medium">Idioma</label>
